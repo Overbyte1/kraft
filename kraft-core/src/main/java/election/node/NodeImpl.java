@@ -1,16 +1,15 @@
-package election;
+package election.node;
 
 import election.role.AbstractRole;
-import rpc.Endpoint;
-
-import java.util.Map;
+import rpc.RpcHandler;
 
 public class NodeImpl implements Node {
     //当前角色：LeaderRole、CandidateRole或FollowerRole之一
     private AbstractRole currentRole;
-    //所有节点的信息
-    private Map<NodeId, Endpoint> nodesMap;
+    //所有节点信息，包括地址、matchIndex、nextIndex等
+    private NodeGroup nodeGroup;
 
+    private RpcHandler rpcHandler;
 
 
     @Override
@@ -26,7 +25,8 @@ public class NodeImpl implements Node {
                 （2）没赢得选票，自己的term或日志不够新
             4.3 选举超时，term + 1，发起新一轮选举
          */
-        
+
+
     }
 
     @Override
@@ -38,4 +38,10 @@ public class NodeImpl implements Node {
     public void apply() {
 
     }
+
+    //TODO:becomeToRole
+    private void becomeToRole(AbstractRole role) {
+
+    }
+
 }

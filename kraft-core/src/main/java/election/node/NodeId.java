@@ -1,4 +1,4 @@
-package election;
+package election.node;
 
 import java.util.UUID;
 

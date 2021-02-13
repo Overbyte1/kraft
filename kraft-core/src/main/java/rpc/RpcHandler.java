@@ -1,6 +1,6 @@
 package rpc;
 
-import election.NodeId;
+import election.node.NodeId;
 import election.log.LogEntry;
 
 import java.util.List;

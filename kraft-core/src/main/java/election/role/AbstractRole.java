@@ -1,6 +1,6 @@
 package election.role;
 
-import election.NodeId;
+import election.node.NodeId;
 import election.log.LogEntry;
 
 import java.util.List;
@@ -21,9 +21,10 @@ public abstract class AbstractRole {
 
     /*易失性数据*/
     //已知已提交的最高的日志条目的索引（初始值为0，单调递增）
-    private long commitIndex;
+    //private long commitIndex;
     //已经被应用到状态机的最高的日志条目的索引（初始值为0，单调递增）
-    private long lastApplied;
+    //private long lastApplied;
+
 
 
     public NodeId getNodeId() {
@@ -66,19 +67,4 @@ public abstract class AbstractRole {
         this.logEntryList = logEntryList;
     }
 
-    public long getCommitIndex() {
-        return commitIndex;
-    }
-
-    public void setCommitIndex(long commitIndex) {
-        this.commitIndex = commitIndex;
-    }
-
-    public long getLastApplied() {
-        return lastApplied;
-    }
-
-    public void setLastApplied(long lastApplied) {
-        this.lastApplied = lastApplied;
-    }
 }

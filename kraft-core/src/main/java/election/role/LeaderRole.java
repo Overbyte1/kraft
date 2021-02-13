@@ -1,6 +1,6 @@
 package election.role;
 
-import election.NodeId;
+import election.node.NodeId;
 
 import java.util.Map;
 

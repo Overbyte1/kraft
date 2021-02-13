@@ -1,6 +1,6 @@
 package rpc.message;
 
-import election.NodeId;
+import election.node.NodeId;
 
 public class RequestVoteMessage {
     private long term;

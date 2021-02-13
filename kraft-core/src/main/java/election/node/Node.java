@@ -1,4 +1,4 @@
-package election;
+package election.node;
 
 public interface Node {
     void start();

@@ -24,4 +24,12 @@ public abstract class AbstractResponse<T> {
     public void setResponseBody(T responseBody) {
         this.responseBody = responseBody;
     }
+
+    @Override
+    public String toString() {
+        return "AbstractResponse{" +
+                "type=" + type +
+                ", responseBody=" + responseBody +
+                '}';
+    }
 }
