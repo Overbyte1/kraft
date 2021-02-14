@@ -2,11 +2,12 @@ package election.role;
 
 import election.node.NodeId;
 
-import java.util.Map;
 
 public class LeaderRole extends AbstractRole {
-    private Map<NodeId, Long> nextIndexMap;
-    private Map<NodeId, Long> matchIndexMap;
-
-
+    public LeaderRole(long term) {
+        super(term);
+    }
+    public LeaderRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
+        super(nodeId, roleType, currentTerm, voteFor);
+    }
 }

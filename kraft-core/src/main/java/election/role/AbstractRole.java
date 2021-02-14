@@ -2,6 +2,7 @@ package election.role;
 
 import election.node.NodeId;
 import election.log.LogEntry;
+import election.node.NodeIdGenerator;
 
 import java.util.List;
 
@@ -9,6 +10,7 @@ public abstract class AbstractRole {
     //节点ID
     private NodeId nodeId;
     //节点名称
+    //TODO:移除该属性
     private RoleType roleType;
 
     /*持久化数据*/
@@ -24,7 +26,26 @@ public abstract class AbstractRole {
     //private long commitIndex;
     //已经被应用到状态机的最高的日志条目的索引（初始值为0，单调递增）
     //private long lastApplied;
+    public AbstractRole(long currentTerm) {
+        this(null, currentTerm);
+    }
 
+    public AbstractRole(RoleType roleType, long currentTerm) {
+        this(roleType, currentTerm, null);
+    }
+
+    public AbstractRole(RoleType roleType, long currentTerm, NodeId voteFor) {
+        this(NodeIdGenerator.generate(), roleType, currentTerm, voteFor);
+    }
+
+    public AbstractRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
+        this.nodeId = nodeId;
+        this.roleType = roleType;
+        this.currentTerm = currentTerm;
+        this.voteFor = voteFor;
+
+        //TODO：logEntryList初始化
+    }
 
 
     public NodeId getNodeId() {

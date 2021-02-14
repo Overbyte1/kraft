@@ -1,13 +1,13 @@
 package election.handler;
 
-import rpc.message.AbstractRequest;
-import rpc.message.AbstractResponse;
+import rpc.message.AppendEntriesResultMessage;
+import rpc.message.RequestVoteMessage;
 
 //TODO：取个好名字
-public interface RequestHandler extends Handler {
+public interface RequestHandler extends MessageHandler {
 
-    void handleAppendEntriesRequest(AbstractRequest request);
+    void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg);
 
-    void handleRequestVote(AbstractRequest request);
+    void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage);
 
 }

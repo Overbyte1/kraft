@@ -1,5 +1,5 @@
 package rpc.message;
-
+//TODO:remove it
 public abstract class AbstractResponse<T> {
     private int type;
 
