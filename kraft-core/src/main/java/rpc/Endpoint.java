@@ -10,6 +10,14 @@ public class Endpoint {
         port = p;
     }
 
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
     public static Endpoint creatEndpoint(String addr, int port) {
         return new Endpoint(addr, port);
     }

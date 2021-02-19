@@ -8,7 +8,11 @@ import rpc.message.RequestVoteResultMessage;
 
 public class NioChannel implements rpc.Channel {
     private io.netty.channel.Channel nettyChannel;
-    private NodeId nodeId;
+//    private NodeId nodeId;
+
+    public NioChannel(io.netty.channel.Channel channel) {
+        nettyChannel = channel;
+    }
 
     @Override
     public void writeRequestVoteMessage(RequestVoteResultMessage message) {
