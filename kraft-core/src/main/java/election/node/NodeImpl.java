@@ -1,10 +1,7 @@
 package election.node;
 
 import election.handler.*;
-import election.role.AbstractRole;
-import election.role.CandidateRole;
-import election.role.FollowerRole;
-import election.role.RoleType;
+import election.role.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.RpcHandler;
@@ -94,6 +91,16 @@ public class NodeImpl implements Node {
 
         @Override
         public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
+            long term = appendRequestMsg.getTerm();
+            if(term > currentRole.getCurrentTerm()) {
+                logger.debug("receive AppendEntriesResultMessage, term is {}", term);
+                //TODO：取消选举超时任务
+
+                becomeToRole(new FollowerRole(term));
+                return;
+            }
+            logger.info("receive unexpect AppendEntriesResultMessage, currentTerm is {}, receive term is {}",
+                    currentRole.getCurrentTerm(), term);
 
         }
 
@@ -109,18 +116,57 @@ public class NodeImpl implements Node {
                 rpcHandler.sendRequestVoteResultMessage(currentTerm, false);
                 //如果requestVoteMessage.term > currentTerm，如果自己的日志更加新则不投票，否则投票。变成Follower
             } else {
-
+                //TODO:添加实现
+                //为进行测试，默认不投票
+                becomeToRole(new FollowerRole(currentTerm));
+                logger.debug("voteFor {}", requestVoteMessage.getCandidateId());
+                rpcHandler.sendRequestVoteResultMessage(currentTerm, false);
             }
         }
 
+        /**
+         * 处理RequestVoteResult
+         * 1. 检查如果voteResultMessage.term，如果大于 currentTerm，则当前角色变为Follower
+         * 2. 如果voteResultMessage.voteGranted==true，检查当前角色是否还是Candidate，如果是则当前票数+1，之后检查总票数是否过半
+         * 3. 如果voteResultMessage.voteGranted==false，直接返回
+         * @param voteResultMessage
+         */
         @Override
         public void handleRequestVoteResult(RequestVoteResultMessage voteResultMessage) {
+            long term = voteResultMessage.getTerm();
+            boolean voteGranted = voteResultMessage.isVoteGranted();
+
+            if(term > currentRole.getCurrentTerm()) {
+                becomeToRole(new FollowerRole(term));
+                return;
+            }
+            if(!voteGranted) {
+                return;
+            }
+            if(!(currentRole instanceof CandidateRole)) {
+                logger.debug("receive requestVoteResult, but current role was not Candidate!");
+                return;
+            }
+            CandidateRole candidateRole = (CandidateRole)currentRole;
+            candidateRole.incVoteCount();
+            logger.debug("receive vote counts are {}, major count is {}", candidateRole.getVoteCount(),
+                    nodeGroup.getSize() / 2);
+            //票数过半，转换成Leader，取消选举超时任务，发送空的AppendEntries消息
+            if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
+                becomeToRole(new LeaderRole(term + 1));
+                //TODO：取消选举超时任务
+                logger.info("current node become leader, term is {}", currentRole.getCurrentTerm());
+                //TODO:发送空的AppendEntries消息
+                rpcHandler.sendAppendEntriesMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(),
+                        0, 0, null, 0);
+
+            }
 
         }
 
         @Override
         public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
-
+            logger.warn("receive AppendEntriesResultMessage, term is {}", appendEntriesResultMessage.getTerm());
         }
     }
 
@@ -134,22 +180,29 @@ public class NodeImpl implements Node {
 
         @Override
         public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
-
+            logger.debug("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
         }
 
         @Override
         public void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
-
+            long term = requestVoteMessage.getTerm();
+            if(term <= currentRole.getCurrentTerm()) {
+                logger.info("receive RequestVoteMessage, receive term is {}, but currentTerm is {}",
+                        term, currentRole.getCurrentTerm());
+                return;
+            }
+            //默认进行投票
+            rpcHandler.sendRequestVoteResultMessage(term, true);
         }
 
         @Override
         public void handleRequestVoteResult(RequestVoteResultMessage voteResultMessage) {
-
+            logger.warn("receive illegal RequestVoteResultMessage, current role is Follower");
         }
 
         @Override
         public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
-
+            logger.warn("receive illegal RequestVoteMessage, current role is Follower");
         }
     }
 
@@ -162,22 +215,37 @@ public class NodeImpl implements Node {
 
         @Override
         public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
-
+            logger.warn("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
+            long term = appendRequestMsg.getTerm();
+            if(term > currentRole.getCurrentTerm()) {
+                logger.info("become Follower from Leader");
+                //TODO:设置选举超时任务
+                becomeToRole(new FollowerRole(term));
+                logger.info("begin to commit");
+                return;
+            }
         }
 
         @Override
         public void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
-
+            logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
+            long term = requestVoteMessage.getTerm();
+            if(term > currentRole.getCurrentTerm()) {
+                logger.info("become Follower from Leader");
+                //TODO:设置选举超时任务
+                becomeToRole(new FollowerRole(term));
+                return;
+            }
         }
 
         @Override
         public void handleRequestVoteResult(RequestVoteResultMessage voteResultMessage) {
-
+            logger.info("receive RequestVoteResultMessage, but current node has become Leader");
         }
 
         @Override
         public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
-
+            logger.debug("receive AppendEntriesResultMessage");
         }
     }
 }

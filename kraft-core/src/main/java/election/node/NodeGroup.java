@@ -12,4 +12,7 @@ public class NodeGroup {
     public void setNodesMap(Map<NodeId, GroupMember> nodesMap) {
         this.nodesMap = nodesMap;
     }
+    public int getSize() {
+        return nodesMap.size();
+    }
 }
