@@ -2,6 +2,9 @@ package election.statemachine;
 
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +41,14 @@ public class DefaultStateMachineTest {
         }
 
         //t2.join();
+    }
+    @Test
+    public void testSerial() throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+        objectOutputStream.writeObject(new Integer(1));
+        System.out.println(byteArrayOutputStream.size());
+
     }
     private void handle() {
         i = 10;

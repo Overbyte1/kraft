@@ -1,8 +1,7 @@
 package rpc;
 
-import election.node.NodeId;
 import election.log.LogEntry;
-import io.netty.bootstrap.Bootstrap;
+import election.node.NodeId;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import rpc.message.AbstractMessage;

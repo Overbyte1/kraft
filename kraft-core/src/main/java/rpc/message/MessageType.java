@@ -9,12 +9,15 @@ public class MessageType {
     public static boolean isRequestVoteType(int type) {
         return type == RequestVote;
     }
+
     public static boolean isRequestVoteResultType(int type) {
         return type == RequestVoteResult;
     }
+
     public static boolean isAppendEntriesType(int type) {
         return type == AppendEntries;
     }
+
     public static boolean isAppendEntriesResultType(int type) {
         return type == AppendEntriesResult;
     }

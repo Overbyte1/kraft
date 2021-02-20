@@ -1,7 +1,7 @@
 package rpc.message;
 
-import election.node.NodeId;
 import election.log.LogEntry;
+import election.node.NodeId;
 
 import java.util.List;
 

@@ -1,21 +1,20 @@
 package rpc.message;
 
 public class AbstractMessage<T> {
-    private int messageId;
+    private int type;
     private T body;
 
-    public AbstractMessage(int messageId, T body) {
-        this.messageId = messageId;
+    public AbstractMessage(int type, T body) {
+        this.type = type;
         this.body = body;
     }
-    public AbstractMessage(){}
 
-    public int getMessageId() {
-        return messageId;
+    public int getType() {
+        return type;
     }
 
-    public void setMessageId(int messageId) {
-        this.messageId = messageId;
+    public void setType(int type) {
+        this.type = type;
     }
 
     public T getBody() {

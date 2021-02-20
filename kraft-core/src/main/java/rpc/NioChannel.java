@@ -1,6 +1,5 @@
 package rpc;
 
-import election.node.NodeId;
 import rpc.exception.NetworkException;
 import rpc.message.AppendEntriesMessage;
 import rpc.message.AppendEntriesResultMessage;
