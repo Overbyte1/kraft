@@ -1,8 +1,8 @@
 package rpc.handler;
 
 import election.handler.MessageHandler;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.message.AbstractMessage;
@@ -10,12 +10,15 @@ import rpc.message.AbstractMessage;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AbstractHandler extends ChannelDuplexHandler {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractHandler.class);
+/**
+ * 根据消息类型注册对应消息的处理器后，当消息到来时，会调用其注册的处理器
+ */
+public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(ServiceInboundHandler.class);
 
     private Map<Class, MessageHandler> handlerMap;
 
-    public AbstractHandler() {
+    public ServiceInboundHandler() {
         handlerMap = new ConcurrentHashMap<>();
     }
 
@@ -29,18 +32,15 @@ public class AbstractHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        AbstractMessage abstractMessage = (AbstractMessage) msg;
-        Object messageBody = abstractMessage.getBody();
 
-        MessageHandler handler = handlerMap.get(messageBody.getClass());
+        MessageHandler handler = handlerMap.get(msg.getClass());
         if (handler == null) {
             logger.warn("Handler not found, msg = {}", msg);
             super.channelRead(ctx, msg);
             return;
         }
-        //AbstractMessage message = (AbstractMessage)msg;
         //处理
-        handler.handle(messageBody);
+        handler.handle(msg);
 
         super.channelRead(ctx, msg);
     }

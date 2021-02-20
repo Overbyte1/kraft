@@ -16,4 +16,7 @@ public interface RpcHandler {
     void sendRequestVoteResultMessage(long term, boolean voteGranted);
 
     void sendAppendEntriesResultMessage(long term, boolean success);
+
+    //TODO：设置 全局唯一的ServiceInboundHandler
+
 }
