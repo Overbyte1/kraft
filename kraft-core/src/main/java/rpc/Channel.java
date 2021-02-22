@@ -2,10 +2,11 @@ package rpc;
 
 import rpc.message.AppendEntriesMessage;
 import rpc.message.AppendEntriesResultMessage;
+import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 
 public interface Channel {
-    void writeRequestVoteMessage(RequestVoteResultMessage message);
+    void writeRequestVoteMessage(RequestVoteMessage message);
 
     void writeAppendEntriesMessage(AppendEntriesMessage message);
 

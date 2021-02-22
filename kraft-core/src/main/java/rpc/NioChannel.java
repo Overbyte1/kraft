@@ -3,6 +3,7 @@ package rpc;
 import rpc.exception.NetworkException;
 import rpc.message.AppendEntriesMessage;
 import rpc.message.AppendEntriesResultMessage;
+import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 
 public class NioChannel implements rpc.Channel {
@@ -13,8 +14,12 @@ public class NioChannel implements rpc.Channel {
         nettyChannel = channel;
     }
 
+    public void writeMessage(Object message) {
+        nettyChannel.writeAndFlush(message);
+    }
+
     @Override
-    public void writeRequestVoteMessage(RequestVoteResultMessage message) {
+    public void writeRequestVoteMessage(RequestVoteMessage message) {
         nettyChannel.writeAndFlush(message);
     }
 
@@ -31,6 +36,9 @@ public class NioChannel implements rpc.Channel {
     @Override
     public void writeAppendEntriesResultMessage(AppendEntriesResultMessage message) {
         nettyChannel.writeAndFlush(message);
+    }
+    public boolean isActive() {
+        return nettyChannel.isActive();
     }
 
     @Override

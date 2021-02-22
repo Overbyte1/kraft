@@ -1,6 +1,8 @@
 package rpc.message;
 
-public class RequestVoteResultMessage {
+import java.io.Serializable;
+
+public class RequestVoteResultMessage implements Serializable {
     private long term;
     private boolean voteGranted;
 
@@ -23,5 +25,13 @@ public class RequestVoteResultMessage {
 
     public void setVoteGranted(boolean voteGranted) {
         this.voteGranted = voteGranted;
+    }
+
+    @Override
+    public String toString() {
+        return "RequestVoteResultMessage{" +
+                "term=" + term +
+                ", voteGranted=" + voteGranted +
+                '}';
     }
 }

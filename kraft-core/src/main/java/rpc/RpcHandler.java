@@ -2,21 +2,24 @@ package rpc;
 
 import election.log.LogEntry;
 import election.node.NodeId;
+import rpc.message.AppendEntriesMessage;
+import rpc.message.AppendEntriesResultMessage;
+import rpc.message.RequestVoteMessage;
+import rpc.message.RequestVoteResultMessage;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface RpcHandler {
     void initialize();
 
-    void sendRequestVoteMessage(long term, NodeId candidateId, long lastLogIndex, long lastLogTerm);
+    void sendRequestVoteMessage(RequestVoteMessage message, Collection<NodeEndpoint> nodeEndpoints);
 
-    void sendAppendEntriesMessage(long term, NodeId leaderId, long preLogIndex, long preLogTerm,
-                                  List<LogEntry> logEntryList, long leaderCommit);
+    void sendAppendEntriesMessage(AppendEntriesMessage message, Collection<NodeEndpoint> nodeEndpoints);
 
-    void sendRequestVoteResultMessage(long term, boolean voteGranted);
+    void sendRequestVoteResultMessage(RequestVoteResultMessage message, NodeEndpoint nodeEndpoint);
 
-    void sendAppendEntriesResultMessage(long term, boolean success);
+    void sendAppendEntriesResultMessage(AppendEntriesResultMessage message, NodeEndpoint nodeEndpoint);
 
-    //TODO：设置 全局唯一的ServiceInboundHandler
 
 }

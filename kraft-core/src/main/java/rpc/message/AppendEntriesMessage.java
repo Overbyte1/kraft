@@ -3,9 +3,10 @@ package rpc.message;
 import election.log.LogEntry;
 import election.node.NodeId;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class AppendEntriesMessage {
+public class AppendEntriesMessage implements Serializable {
     //Leader的term
     private long term;
     private NodeId leaderId;

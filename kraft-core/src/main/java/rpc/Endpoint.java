@@ -21,4 +21,12 @@ public class Endpoint {
     public static Endpoint creatEndpoint(String addr, int port) {
         return new Endpoint(addr, port);
     }
+
+    @Override
+    public String toString() {
+        return "Endpoint{" +
+                "ipAddress='" + ipAddress + '\'' +
+                ", port=" + port +
+                '}';
+    }
 }

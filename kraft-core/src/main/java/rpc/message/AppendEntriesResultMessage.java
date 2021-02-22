@@ -1,6 +1,8 @@
 package rpc.message;
 
-public class AppendEntriesResultMessage {
+import java.io.Serializable;
+
+public class AppendEntriesResultMessage implements Serializable {
     private long term;
     private boolean success;
 

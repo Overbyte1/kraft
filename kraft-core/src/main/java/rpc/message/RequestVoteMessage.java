@@ -2,7 +2,9 @@ package rpc.message;
 
 import election.node.NodeId;
 
-public class RequestVoteMessage {
+import java.io.Serializable;
+
+public class RequestVoteMessage implements Serializable {
     private long term;
     private NodeId candidateId;
     private long lastLogIndex;
@@ -48,5 +50,15 @@ public class RequestVoteMessage {
 
     public void setLastLogTerm(long lastLogTerm) {
         this.lastLogTerm = lastLogTerm;
+    }
+
+    @Override
+    public String toString() {
+        return "RequestVoteMessage{" +
+                "term=" + term +
+                ", candidateId=" + candidateId +
+                ", lastLogIndex=" + lastLogIndex +
+                ", lastLogTerm=" + lastLogTerm +
+                '}';
     }
 }
