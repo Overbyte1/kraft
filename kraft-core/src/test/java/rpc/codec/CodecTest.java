@@ -13,6 +13,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import rpc.handler.ServiceInboundHandler;
 import rpc.message.AbstractMessage;
 import rpc.message.MessageType;
 import rpc.message.RequestVoteMessage;
@@ -50,6 +53,7 @@ public class CodecTest {
                         pipeline.addLast(new FrameEncoder());
                         pipeline.addLast(new ProtocolDecoder());
                         pipeline.addLast(new ProtocolEncoder());
+                        pipeline.addLast(ServiceInboundHandler.getInstance());
                         pipeline.addLast(new LoggingHandler(LogLevel.INFO));
                     }
                 });
@@ -82,15 +86,31 @@ public class CodecTest {
                 });
         try {
             ChannelFuture future = bootstrap.connect().sync();
-            AbstractMessage<RequestVoteMessage> message = new AbstractMessage<>(MessageType.RequestVote,
-                    new RequestVoteMessage(0, new NodeId("123"), 0, 1));
+//            AbstractMessage<RequestVoteMessage> message = new AbstractMessage<>(MessageType.RequestVote,
+//                    new RequestVoteMessage(0, new NodeId("123"), 0, 1));
+            RequestVoteMessage message = new RequestVoteMessage(0, new NodeId("123"), 0, 1);
             future.channel().writeAndFlush(message);
             Thread.sleep(10000);
             System.out.println("client send");
             future.channel().closeFuture();
+            Thread.sleep(100000);
         } catch (InterruptedException e) {
             workerGroup.shutdownGracefully();
             e.printStackTrace();
         }
     }
+    private void test(String... args) {
+        for (String arg : args) {
+            System.out.println(arg);
+        }
+    }
+    @Test
+    public void testArg() {
+        test();
+        test("ddd");
+        test("abc", "aaa");
+        Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    }
+
 }
