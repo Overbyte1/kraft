@@ -1,17 +1,22 @@
 package election.node;
 
-import rpc.Endpoint;
+import rpc.NodeEndpoint;
 
 public class GroupMember {
-    private Endpoint endpoint;
     private ReplicationState replicationState;
+    private NodeEndpoint nodeEndpoint;
 
-    public Endpoint getEndpoint() {
-        return endpoint;
+    public GroupMember(ReplicationState replicationState, NodeEndpoint nodeEndpoint) {
+        this.replicationState = replicationState;
+        this.nodeEndpoint = nodeEndpoint;
     }
 
-    public void setEndpoint(Endpoint endpoint) {
-        this.endpoint = endpoint;
+    public NodeEndpoint getNodeEndpoint() {
+        return nodeEndpoint;
+    }
+
+    public void setNodeEndpoint(NodeEndpoint nodeEndpoint) {
+        this.nodeEndpoint = nodeEndpoint;
     }
 
     public ReplicationState getReplicationState() {

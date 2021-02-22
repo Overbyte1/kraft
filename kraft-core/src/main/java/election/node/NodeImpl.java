@@ -1,20 +1,29 @@
 package election.node;
 
+import election.config.GlobalConfig;
 import election.handler.*;
 import election.role.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rpc.NodeEndpoint;
 import rpc.RpcHandler;
+import rpc.exception.NetworkException;
+import rpc.handler.ServiceInboundHandler;
+import rpc.message.AppendEntriesMessage;
 import rpc.message.AppendEntriesResultMessage;
 import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 import schedule.TaskScheduleExecutor;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class NodeImpl implements Node {
     private static final Logger logger = LoggerFactory.getLogger(NodeImpl.class);
+    private final ServiceInboundHandler serviceInboundHandler = ServiceInboundHandler.getInstance();
     //当前角色：LeaderRole、CandidateRole或FollowerRole之一
     private AbstractRole currentRole;
     //所有节点信息，包括地址、matchIndex、nextIndex等
@@ -24,11 +33,20 @@ public class NodeImpl implements Node {
 
     private TaskScheduleExecutor scheduleExecutor;
     //TODO：配置类
-    private long electionTimeout;
-    private long heartBeatTimeout;
+    private GlobalConfig config;
+
+    ScheduledFuture<?> electionTimeoutFuture;
+
+    //TODO:remove it
 
 
-
+    public NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduleExecutor scheduleExecutor, GlobalConfig config) {
+        this.currentRole = currentRole;
+        this.nodeGroup = nodeGroup;
+        this.rpcHandler = rpcHandler;
+        this.scheduleExecutor = scheduleExecutor;
+        this.config = config;
+    }
 
     @Override
     public void start() {
@@ -43,8 +61,11 @@ public class NodeImpl implements Node {
                 （2）没赢得选票，自己的term或日志不够新
             4.3 选举超时，term + 1，发起新一轮选举
          */
-        becomeToRole(new FollowerRole(null, RoleType.FOLLOWER, 0, null));
-
+        //TODO:change
+        //becomeToRole(new FollowerRole(currentRole.getNodeId(), 0));
+        registerHandler(currentRole);
+        startElection();
+        //scheduleExecutor.schedule(this::electionTimeout, config.getMinElectionTimeout(), TimeUnit.MILLISECONDS);
 
     }
 
@@ -59,23 +80,75 @@ public class NodeImpl implements Node {
     }
 
     //TODO:becomeToRole
-    private void becomeToRole(AbstractRole role) {
-        currentRole = role;
+    private void becomeToRole(AbstractRole targetRole) {
+        AbstractRole sourceRole = currentRole;
+        //TODO:remove it
+//        if(sourceRole != null) {
+//            serviceInboundHandler.unregisterHandler(sourceRole.getClass());
+//        }
+        currentRole = targetRole;
+        registerHandler(targetRole);
+    }
+    private void registerHandler(AbstractRole targetRole) {
+        Class clazz = targetRole.getClass();
+        MessageHandler handler = getMessageHandler(clazz);
+        //TODO:根据不同role 移除或注册handler，需要确保更换的原子性 或者 处理时能够识别 角色已经改变
+        serviceInboundHandler.registerHandler(AppendEntriesMessage.class, handler);
+        serviceInboundHandler.registerHandler(AppendEntriesResultMessage.class, handler);
+        serviceInboundHandler.registerHandler(RequestVoteMessage.class, handler);
+        serviceInboundHandler.registerHandler(RequestVoteResultMessage.class, handler);
+    }
+
+    /**
+     * 根据角色类型获取 消息处理器（MessageHandler）
+     * @param roleClazz
+     * @return
+     */
+    private MessageHandler getMessageHandler(Class roleClazz) {
+        if(roleClazz == LeaderRole.class) {
+            return new LeaderMessageHandler(logger);
+        } else if(roleClazz == CandidateRole.class) {
+            return new CandidateMessageHandler(logger);
+        } else if(roleClazz == FollowerRole.class){
+            return new FollowerMessageHandler(logger);
+        } else {
+            logger.error("cannot find MessageHandler, role type is {}", roleClazz);
+            //TODO：抛异常
+            return null;
+        }
     }
 
     private void startElection() {
         logger.debug("start election, new term is {}", currentRole.getCurrentTerm() + 1);
 
         //将角色更改为Candidate，term + 1
-        becomeToRole(new CandidateRole(currentRole.getCurrentTerm() + 1));
+        becomeToRole(new CandidateRole(currentRole.getNodeId(), currentRole.getCurrentTerm() + 1, null));
         //提交选举超时任务
-        ScheduledFuture<?> future = scheduleExecutor.schedule(this::electionTimeout, electionTimeout,
+        //TODO:修改时间
+        electionTimeoutFuture = scheduleExecutor.schedule(this::electionTimeout, config.getMinElectionTimeout(),
                 TimeUnit.MILLISECONDS);
         //向所有节点发送请求投票rpc
         //TODO：设置lastLogIndex、lastLogTerm
-        rpcHandler.sendRequestVoteMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(), 0, 0);
+        rpcHandler.sendRequestVoteMessage(new RequestVoteMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(),
+                0, 0), getAllNodeEndpoint());
 
 
+    }
+    private NodeEndpoint getNodeEndpoint(NodeId nodeId) {
+        GroupMember groupMember = nodeGroup.getGroupMember(nodeId);
+        if(groupMember == null) {
+            logger.warn("NodeEndpoint of nodeId {} not exist", nodeId);
+            throw new NetworkException("NodeEndpoint not exist");
+        }
+        return groupMember.getNodeEndpoint();
+    }
+    private Set<NodeEndpoint> getAllNodeEndpoint() {
+        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
+        Set<NodeEndpoint> set = new HashSet<>();
+        for (GroupMember groupMember : allGroupMember) {
+            set.add(groupMember.getNodeEndpoint());
+        }
+        return set;
     }
     private void electionTimeout() {
         logger.debug("election timeout, current term is {}", currentRole.getCurrentTerm());
@@ -83,44 +156,48 @@ public class NodeImpl implements Node {
     }
 
     private class CandidateMessageHandler extends AbstractMessageHandler implements RequestHandler, ResponseHandler {
-        private final Logger logger = LoggerFactory.getLogger(election.handler.CandidateMessageHandler.class);
+        private final Logger logger = LoggerFactory.getLogger(CandidateMessageHandler.class);
 
         public CandidateMessageHandler(Logger logger) {
-            super(logger);
+            super(logger, nodeGroup, rpcHandler);
         }
 
         @Override
-        public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
+        public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             long term = appendRequestMsg.getTerm();
             if(term > currentRole.getCurrentTerm()) {
                 logger.debug("receive AppendEntriesResultMessage, term is {}", term);
                 //TODO：取消选举超时任务
 
-                becomeToRole(new FollowerRole(term));
-                return;
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                return null;
             }
             logger.info("receive unexpect AppendEntriesResultMessage, currentTerm is {}, receive term is {}",
                     currentRole.getCurrentTerm(), term);
-
+            return null;
         }
 
         @Override
-        public void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
+        public RequestVoteResultMessage handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
             long term = requestVoteMessage.getTerm();
             long currentTerm = currentRole.getCurrentTerm();
+            //NodeEndpoint nodeEndpoint = getNodeEndpoint(sourceId);
             //如果requestVoteMessage.term < currentTerm，不投票，并返回currentTerm
             if(term < currentTerm) {
-                rpcHandler.sendRequestVoteResultMessage(currentTerm, false);
+                return new RequestVoteResultMessage(currentTerm, false);
+                //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
             //如果如果requestVoteMessage.term == currentTerm，不投票，因为票已经投给了自己
             } else if(term == currentTerm) {
-                rpcHandler.sendRequestVoteResultMessage(currentTerm, false);
+                return new RequestVoteResultMessage(currentTerm, false);
+                //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
                 //如果requestVoteMessage.term > currentTerm，如果自己的日志更加新则不投票，否则投票。变成Follower
             } else {
                 //TODO:添加实现
                 //为进行测试，默认不投票
-                becomeToRole(new FollowerRole(currentTerm));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), currentTerm));
                 logger.debug("voteFor {}", requestVoteMessage.getCandidateId());
-                rpcHandler.sendRequestVoteResultMessage(currentTerm, false);
+                //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
+                return new RequestVoteResultMessage(currentTerm, true);
             }
         }
 
@@ -137,7 +214,7 @@ public class NodeImpl implements Node {
             boolean voteGranted = voteResultMessage.isVoteGranted();
 
             if(term > currentRole.getCurrentTerm()) {
-                becomeToRole(new FollowerRole(term));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
                 return;
             }
             if(!voteGranted) {
@@ -153,12 +230,14 @@ public class NodeImpl implements Node {
                     nodeGroup.getSize() / 2);
             //票数过半，转换成Leader，取消选举超时任务，发送空的AppendEntries消息
             if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
-                becomeToRole(new LeaderRole(term + 1));
+                becomeToRole(new LeaderRole(currentRole.getNodeId(), term + 1));
                 //TODO：取消选举超时任务
+                electionTimeoutFuture.cancel(true);
                 logger.info("current node become leader, term is {}", currentRole.getCurrentTerm());
                 //TODO:发送空的AppendEntries消息
-                rpcHandler.sendAppendEntriesMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(),
-                        0, 0, null, 0);
+                Set<NodeEndpoint> allNodeEndpoint = getAllNodeEndpoint();
+//                rpcHandler.sendAppendEntriesMessage(, currentRole.getCurrentTerm(),
+//                        allNodeEndpoint);
 
             }
 
@@ -171,28 +250,31 @@ public class NodeImpl implements Node {
     }
 
     class FollowerMessageHandler extends AbstractMessageHandler implements RequestHandler, ResponseHandler {
-        private final Logger logger = LoggerFactory.getLogger(election.handler.FollowerMessageHandler.class);
+        private final Logger logger = LoggerFactory.getLogger(FollowerMessageHandler.class);
 
 
         public FollowerMessageHandler(Logger logger) {
-            super(logger);
+            super(logger, nodeGroup, rpcHandler);
         }
 
         @Override
-        public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
+        public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             logger.debug("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
+            return null;
         }
 
         @Override
-        public void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
+        public RequestVoteResultMessage handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
             long term = requestVoteMessage.getTerm();
             if(term <= currentRole.getCurrentTerm()) {
                 logger.info("receive RequestVoteMessage, receive term is {}, but currentTerm is {}",
                         term, currentRole.getCurrentTerm());
-                return;
+                return null;
             }
             //默认进行投票
-            rpcHandler.sendRequestVoteResultMessage(term, true);
+            //NodeEndpoint nodeEndpoint = getNodeEndpoint(currentRole.getNodeId());
+            return new RequestVoteResultMessage(term, true);
+            //rpcHandler.sendRequestVoteResultMessage(term, true, nodeEndpoint);
         }
 
         @Override
@@ -207,35 +289,37 @@ public class NodeImpl implements Node {
     }
 
     class LeaderMessageHandler extends AbstractMessageHandler implements RequestHandler, ResponseHandler {
-        private final Logger logger = LoggerFactory.getLogger(election.handler.LeaderMessageHandler.class);
+        private final Logger logger = LoggerFactory.getLogger(LeaderMessageHandler.class);
 
         public LeaderMessageHandler(Logger logger) {
-            super(logger);
+            super(logger, nodeGroup, rpcHandler);
         }
 
         @Override
-        public void handleAppendEntriesRequest(AppendEntriesResultMessage appendRequestMsg) {
+        public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             logger.warn("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
             long term = appendRequestMsg.getTerm();
             if(term > currentRole.getCurrentTerm()) {
                 logger.info("become Follower from Leader");
                 //TODO:设置选举超时任务
-                becomeToRole(new FollowerRole(term));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
                 logger.info("begin to commit");
-                return;
+                return null;
             }
+            return null;
         }
 
         @Override
-        public void handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
+        public RequestVoteResultMessage handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
             logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
             long term = requestVoteMessage.getTerm();
             if(term > currentRole.getCurrentTerm()) {
                 logger.info("become Follower from Leader");
                 //TODO:设置选举超时任务
-                becomeToRole(new FollowerRole(term));
-                return;
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                return new RequestVoteResultMessage(term, true);
             }
+            return new RequestVoteResultMessage(currentRole.getCurrentTerm(), false);
         }
 
         @Override

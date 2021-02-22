@@ -8,15 +8,15 @@ import org.junit.Test;
 import schedule.SingleTaskScheduleExecutor;
 import schedule.TaskScheduleExecutor;
 
-public class RpcHandlerImplTest1 {
+public class RpcHandlerImplTest2 {
     private int port;
     private ChannelGroup channelGroup;
     private RpcHandler rpcHandler;
     private NodeImpl node;
     @Before
     public void init() {
-        port = 8090;
-        channelGroup = new ChannelGroup(new NodeId("A"));
+        port = 8092;
+        channelGroup = new ChannelGroup(new NodeId("C"));
         NodeGroup nodeGroup = initNodeGroup();
         rpcHandler = new RpcHandlerImpl(channelGroup, port);
         TaskScheduleExecutor scheduleExecutor = new SingleTaskScheduleExecutor();
@@ -25,20 +25,21 @@ public class RpcHandlerImplTest1 {
     }
     private NodeGroup initNodeGroup() {
         NodeGroup nodeGroup = new NodeGroup();
-        NodeId nodeId1 = new NodeId("B");
+        NodeId nodeId1 = new NodeId("A");
         GroupMember member1 = new GroupMember(new ReplicationState(0, 0),
-                new NodeEndpoint(nodeId1, new Endpoint("localhost", 8091)));
-        NodeId nodeId2 = new NodeId("C");
+                new NodeEndpoint(nodeId1, new Endpoint("localhost", 8090)));
+        NodeId nodeId2 = new NodeId("B");
         GroupMember member2 = new GroupMember(new ReplicationState(0, 0),
-                new NodeEndpoint(nodeId2, new Endpoint("localhost", 8092)));
+                new NodeEndpoint(nodeId2, new Endpoint("localhost", 8091)));
         nodeGroup.addGroupMember(nodeId1, member1);
         nodeGroup.addGroupMember(nodeId2, member2);
         return nodeGroup;
     }
     @Test
-    public void testSendRequestVoteMessage() {
+    public void testSendRequestVoteMessage() throws InterruptedException {
         rpcHandler.initialize();
         node.start();
+        Thread.sleep(10000000);
 
     }
     @After

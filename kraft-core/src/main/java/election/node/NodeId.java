@@ -1,8 +1,9 @@
 package election.node;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public class NodeId {
+public class NodeId implements Serializable {
     private String value;
 
     public NodeId(String val) {
@@ -30,5 +31,12 @@ public class NodeId {
     @Override
     public int hashCode() {
         return value != null ? value.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "NodeId{" +
+                "value='" + value + '\'' +
+                '}';
     }
 }

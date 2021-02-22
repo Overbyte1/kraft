@@ -4,6 +4,11 @@ public class ReplicationState {
     private int nextIndex;
     private int matchIndex;
 
+    public ReplicationState(int nextIndex, int matchIndex) {
+        this.nextIndex = nextIndex;
+        this.matchIndex = matchIndex;
+    }
+
     public int getNextIndex() {
         return nextIndex;
     }
