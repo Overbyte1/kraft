@@ -1,7 +1,7 @@
 package election.role;
 
 import election.node.NodeId;
-import election.log.LogEntry;
+import election.log.entry.LogEntry;
 import election.node.NodeIdGenerator;
 
 import java.util.List;

@@ -1,6 +1,6 @@
 package rpc.message;
 
-import election.log.LogEntry;
+import election.log.entry.LogEntry;
 import election.node.NodeId;
 
 import java.io.Serializable;

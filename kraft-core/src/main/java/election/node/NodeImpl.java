@@ -37,8 +37,6 @@ public class NodeImpl implements Node {
 
     ScheduledFuture<?> electionTimeoutFuture;
 
-    //TODO:remove it
-
 
     public NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduleExecutor scheduleExecutor, GlobalConfig config) {
         this.currentRole = currentRole;
@@ -81,12 +79,13 @@ public class NodeImpl implements Node {
 
     //TODO:becomeToRole
     private void becomeToRole(AbstractRole targetRole) {
-        AbstractRole sourceRole = currentRole;
-        //TODO:remove it
-//        if(sourceRole != null) {
-//            serviceInboundHandler.unregisterHandler(sourceRole.getClass());
-//        }
         currentRole = targetRole;
+        //设置超时任务
+        if(targetRole instanceof FollowerRole) {
+
+        } else if(targetRole instanceof  CandidateRole) {
+
+        }
         registerHandler(targetRole);
     }
     private void registerHandler(AbstractRole targetRole) {
@@ -131,8 +130,6 @@ public class NodeImpl implements Node {
         //TODO：设置lastLogIndex、lastLogTerm
         rpcHandler.sendRequestVoteMessage(new RequestVoteMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(),
                 0, 0), getAllNodeEndpoint());
-
-
     }
     private NodeEndpoint getNodeEndpoint(NodeId nodeId) {
         GroupMember groupMember = nodeGroup.getGroupMember(nodeId);
@@ -153,6 +150,12 @@ public class NodeImpl implements Node {
     private void electionTimeout() {
         logger.debug("election timeout, current term is {}", currentRole.getCurrentTerm());
         startElection();
+    }
+    private void logReplicationTimeout() {
+        long currentTerm = currentRole.getCurrentTerm();
+        logger.info("logReplication timeout, current term is {}", currentTerm);
+        becomeToRole(new CandidateRole(currentRole.getNodeId(), currentTerm));
+
     }
 
     private class CandidateMessageHandler extends AbstractMessageHandler implements RequestHandler, ResponseHandler {
@@ -181,15 +184,12 @@ public class NodeImpl implements Node {
         public RequestVoteResultMessage handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
             long term = requestVoteMessage.getTerm();
             long currentTerm = currentRole.getCurrentTerm();
-            //NodeEndpoint nodeEndpoint = getNodeEndpoint(sourceId);
             //如果requestVoteMessage.term < currentTerm，不投票，并返回currentTerm
             if(term < currentTerm) {
                 return new RequestVoteResultMessage(currentTerm, false);
-                //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
             //如果如果requestVoteMessage.term == currentTerm，不投票，因为票已经投给了自己
             } else if(term == currentTerm) {
                 return new RequestVoteResultMessage(currentTerm, false);
-                //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
                 //如果requestVoteMessage.term > currentTerm，如果自己的日志更加新则不投票，否则投票。变成Follower
             } else {
                 //TODO:添加实现
@@ -233,7 +233,7 @@ public class NodeImpl implements Node {
                 becomeToRole(new LeaderRole(currentRole.getNodeId(), term + 1));
                 //TODO：取消选举超时任务
                 electionTimeoutFuture.cancel(true);
-                logger.info("current node become leader, term is {}", currentRole.getCurrentTerm());
+                logger.info("current node {} become leader, term is {}", currentRole.getNodeId(), currentRole.getCurrentTerm());
                 //TODO:发送空的AppendEntries消息
                 Set<NodeEndpoint> allNodeEndpoint = getAllNodeEndpoint();
 //                rpcHandler.sendAppendEntriesMessage(, currentRole.getCurrentTerm(),

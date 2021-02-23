@@ -9,6 +9,9 @@ public class CandidateRole extends AbstractRole {
     public CandidateRole(long currentTerm) {
         super(currentTerm);
     }
+    public CandidateRole(NodeId nodeId, long currentTerm) {
+        this(nodeId, currentTerm, null);
+    }
     public CandidateRole(NodeId nodeId, long currentTerm, NodeId voteFor) {
         this(nodeId, RoleType.CANDIDATE, currentTerm, voteFor);
     }
