@@ -1,22 +1,23 @@
 package election.log.entry;
 
 public abstract class Entry {
-    private int kind;
+    private int type;
     private long term;
     private long index;
 
-    public Entry(int kind, long term, long index) {
-        this.kind = kind;
+
+    public Entry(int type, long term, long index) {
+        this.type = type;
         this.term = term;
         this.index = index;
     }
 
-    public int getKind() {
-        return kind;
+    public int getType() {
+        return type;
     }
 
-    public void setKind(int kind) {
-        this.kind = kind;
+    public void setType(int type) {
+        this.type = type;
     }
 
     public long getTerm() {
@@ -26,6 +27,7 @@ public abstract class Entry {
     public void setTerm(long term) {
         this.term = term;
     }
+
 
     public long getIndex() {
         return index;

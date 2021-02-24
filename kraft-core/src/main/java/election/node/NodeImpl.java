@@ -2,6 +2,8 @@ package election.node;
 
 import election.config.GlobalConfig;
 import election.handler.*;
+import election.log.DefaultLog;
+import election.log.entry.Entry;
 import election.role.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +17,7 @@ import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 import schedule.TaskScheduleExecutor;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +32,8 @@ public class NodeImpl implements Node {
     private RpcHandler rpcHandler;
 
     private TaskScheduleExecutor scheduleExecutor;
+
+    private DefaultLog log;
     //TODO：配置类
     private GlobalConfig config;
 
@@ -73,8 +75,8 @@ public class NodeImpl implements Node {
     }
 
     @Override
-    public void apply() {
-
+    public boolean apply(byte[] command) {
+        return false;
     }
 
     //TODO:becomeToRole
@@ -168,16 +170,22 @@ public class NodeImpl implements Node {
         @Override
         public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             long term = appendRequestMsg.getTerm();
-            if(term > currentRole.getCurrentTerm()) {
+            if(term >= currentRole.getCurrentTerm()) {
                 logger.debug("receive AppendEntriesResultMessage, term is {}", term);
                 //TODO：取消选举超时任务
-
+                electionTimeoutFuture.cancel(true);
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
-                return null;
+                List<Entry> entryList = appendRequestMsg.getLogEntryList();
+                long preTerm = appendRequestMsg.getPreLogTerm();
+                long preLogIndex = appendRequestMsg.getPreLogIndex();
+                long currentLogIndex = entryList.get(0).getIndex();
+                if (log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
+                    return new AppendEntriesResultMessage(term, true);
+                }
             }
             logger.info("receive unexpect AppendEntriesResultMessage, currentTerm is {}, receive term is {}",
                     currentRole.getCurrentTerm(), term);
-            return null;
+            return new AppendEntriesResultMessage(currentRole.getCurrentTerm(), false);
         }
 
         @Override
@@ -230,12 +238,13 @@ public class NodeImpl implements Node {
                     nodeGroup.getSize() / 2);
             //票数过半，转换成Leader，取消选举超时任务，发送空的AppendEntries消息
             if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
-                becomeToRole(new LeaderRole(currentRole.getNodeId(), term + 1));
-                //TODO：取消选举超时任务
+                becomeToRole(new LeaderRole(currentRole.getNodeId(), term));
+                //取消选举超时任务
                 electionTimeoutFuture.cancel(true);
-                logger.info("current node {} become leader, term is {}", currentRole.getNodeId(), currentRole.getCurrentTerm());
+                logger.info("current node {} become leader,current term is {}", currentRole.getNodeId(), currentRole.getCurrentTerm());
                 //TODO:发送空的AppendEntries消息
                 Set<NodeEndpoint> allNodeEndpoint = getAllNodeEndpoint();
+                //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
 //                rpcHandler.sendAppendEntriesMessage(, currentRole.getCurrentTerm(),
 //                        allNodeEndpoint);
 
@@ -244,7 +253,7 @@ public class NodeImpl implements Node {
         }
 
         @Override
-        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
+        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
             logger.warn("receive AppendEntriesResultMessage, term is {}", appendEntriesResultMessage.getTerm());
         }
     }
@@ -260,7 +269,24 @@ public class NodeImpl implements Node {
         @Override
         public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             logger.debug("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
-            return null;
+            long currentTerm = currentRole.getCurrentTerm();
+            long term = appendRequestMsg.getTerm();
+            if(currentTerm > term) {
+                return new AppendEntriesResultMessage(currentTerm, false);
+            }
+            if(currentTerm < term) {
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+            }
+
+            List<Entry> entryList = appendRequestMsg.getLogEntryList();
+            long preTerm = appendRequestMsg.getPreLogTerm();
+            long preLogIndex = appendRequestMsg.getPreLogIndex();
+            long currentLogIndex = entryList.get(0).getIndex();
+
+            if(log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
+                return new AppendEntriesResultMessage(currentTerm, true);
+            }
+            return new AppendEntriesResultMessage(currentTerm, false);
         }
 
         @Override
@@ -283,7 +309,7 @@ public class NodeImpl implements Node {
         }
 
         @Override
-        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
+        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
             logger.warn("receive illegal RequestVoteMessage, current role is Follower");
         }
     }
@@ -328,8 +354,31 @@ public class NodeImpl implements Node {
         }
 
         @Override
-        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
-            logger.debug("receive AppendEntriesResultMessage");
+        public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
+            logger.debug("receive AppendEntriesResultMessage: {}", appendEntriesResultMessage);
+            long term = appendEntriesResultMessage.getTerm();
+            boolean success = appendEntriesResultMessage.isSuccess();
+            if(success) {
+                //TODO：commitIndex推进需要过半matchIndex以及term，只有日志条目的term和自己的term一致才能更新commitIndex
+            }
+            //fail
+            if(term > currentRole.getCurrentTerm()) {
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                return;
+            }
+            //preLogTerm and preLogIndex 不匹配，减少 nextIndex 并重试
+            log.decNextIndex(fromId);
+            //创建 AppendEntriesMessage
+            AppendEntriesMessage message =
+                    log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm());
+            //获取地址信息
+            NodeEndpoint nodeEndpoint = getNodeEndpoint(fromId);
+            List<NodeEndpoint> list = new ArrayList<>(1);
+            list.add(nodeEndpoint);
+            //发送
+            rpcHandler.sendAppendEntriesMessage(message, list);
+            /*TODO：ReplicationState 由谁负责：matchIndex和nextIndex，由log维护？
+             */
         }
     }
 }

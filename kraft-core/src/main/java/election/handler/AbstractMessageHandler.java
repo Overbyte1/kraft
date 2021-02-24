@@ -31,7 +31,7 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
         } else if(messageClass == AppendEntriesMessage.class) {
             handleAppendEntriesRequest((AppendEntriesMessage)abstractMessage.getBody());
         }else if(messageClass == AppendEntriesResultMessage.class) {
-            handleAppendEntriesResult((AppendEntriesResultMessage) abstractMessage.getBody());
+            handleAppendEntriesResult((AppendEntriesResultMessage) abstractMessage.getBody(), nodeId);
         }
         //TODO：添加其余判断
 
@@ -56,7 +56,7 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
     }
 
     @Override
-    public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage) {
+    public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
         throw new UnsupportedOperationException();
     }
 }

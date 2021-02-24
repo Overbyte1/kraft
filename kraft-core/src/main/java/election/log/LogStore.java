@@ -1,17 +1,25 @@
 package election.log;
 
-import election.log.entry.LogEntry;
+import election.log.entry.Entry;
+import election.log.entry.EntryMeta;
 
 import java.util.List;
 
 public interface LogStore {
-    LogEntry getLogEntry(long logIndex);
+    Entry getLogEntry(long logIndex);
 
-    List<LogEntry> getLogEntriesFrom(long logIndex);
+    Entry getLastEntry();
 
-    boolean appendEntries(List<LogEntry> logs);
+    long getLastLogIndex();
+
+    EntryMeta getEntryMata(long logIndex);
+
+    List<Entry> getLogEntriesFrom(long logIndex);
+
+    boolean appendEntries(List<Entry> logs);
 
     boolean deleteLogEntriesFrom(long logIndex);
 
     boolean match(long logIndex, long preTerm, long preLogIndex);
+
 }

@@ -1,5 +1,6 @@
 package rpc.message;
 
+import election.log.entry.Entry;
 import election.log.entry.LogEntry;
 import election.node.NodeId;
 
@@ -15,14 +16,14 @@ public class AppendEntriesMessage implements Serializable {
     //Leader的上一个日志的index
     private long preLogIndex;
     //发送的日志，为了提高效率可能一次性发送多个
-    private List<LogEntry> logEntryList;
+    private List<Entry> entryList;
 
-    public AppendEntriesMessage(long term, NodeId leaderId, long preLogTerm, long preLogIndex, List<LogEntry> logEntryList) {
+    public AppendEntriesMessage(long term, NodeId leaderId, long preLogTerm, long preLogIndex, List<Entry> entryList) {
         this.term = term;
         this.leaderId = leaderId;
         this.preLogTerm = preLogTerm;
         this.preLogIndex = preLogIndex;
-        this.logEntryList = logEntryList;
+        this.entryList = entryList;
     }
 
     public long getTerm() {
@@ -57,12 +58,12 @@ public class AppendEntriesMessage implements Serializable {
         this.preLogIndex = preLogIndex;
     }
 
-    public List<LogEntry> getLogEntryList() {
-        return logEntryList;
+    public List<Entry> getLogEntryList() {
+        return entryList;
     }
 
-    public void setLogEntryList(List<LogEntry> logEntryList) {
-        this.logEntryList = logEntryList;
+    public void setLogEntryList(List<Entry> entryList) {
+        this.entryList = entryList;
     }
 
     @Override
@@ -72,7 +73,7 @@ public class AppendEntriesMessage implements Serializable {
                 ", leaderId=" + leaderId +
                 ", preLogTerm=" + preLogTerm +
                 ", preLogIndex=" + preLogIndex +
-                ", logEntryList=" + logEntryList +
+                ", entryList=" + entryList +
                 '}';
     }
 }
