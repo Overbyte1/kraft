@@ -1,7 +1,7 @@
 package election.log.entry;
 
 public class EntryType {
-    private static final int GENERAL = 0;
-    private static final int NO_OP = 1;
+    public static final int GENERAL = 0;
+    public static final int Empty = 1;
 
 }

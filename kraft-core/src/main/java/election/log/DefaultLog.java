@@ -1,7 +1,9 @@
 package election.log;
 
+import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
+import election.log.entry.EntryType;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.ReplicationState;
@@ -21,7 +23,7 @@ public class DefaultLog {
 
     public synchronized boolean advanceCommit(long currentTerm) {
         EntryMeta entryMata = logStore.getEntryMata(commitIndex);
-        //TODO:+1幅度过小，应该大一些，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
+        //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
         if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
             commitIndex++;
             apply();
@@ -39,7 +41,6 @@ public class DefaultLog {
      * @return
      */
     public boolean isNewerThan(long term,  long logIndex) {
-        //Entry logEntry = logStore.getLogEntry(logIndex);
         EntryMeta entryMata = logStore.getEntryMata(logIndex);
         if(entryMata.getTerm() != term) {
             return term > entryMata.getTerm();
@@ -67,6 +68,12 @@ public class DefaultLog {
             return logStore.appendEntries(entryList);
         }
         return false;
+    }
+    public EmptyEntry appendEmptyEntry(long term) {
+        //这是成为Leader后添加的第一条日志，其他上层应用的日志必须等待该条日志添加完毕才能添加，所以是线程安全的
+        EmptyEntry entry = new EmptyEntry(EntryType.Empty, term, logStore.getLastLogIndex() + 1);
+        logStore.appendEntry(entry);
+        return entry;
     }
     public void decNextIndex(NodeId nodeId) {
 

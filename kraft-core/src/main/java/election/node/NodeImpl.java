@@ -4,6 +4,7 @@ import election.config.GlobalConfig;
 import election.handler.*;
 import election.log.DefaultLog;
 import election.log.entry.Entry;
+import election.log.entry.EntryType;
 import election.role.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,7 @@ public class NodeImpl implements Node {
     private static final Logger logger = LoggerFactory.getLogger(NodeImpl.class);
     private final ServiceInboundHandler serviceInboundHandler = ServiceInboundHandler.getInstance();
     //当前角色：LeaderRole、CandidateRole或FollowerRole之一
-    private AbstractRole currentRole;
+    private volatile AbstractRole currentRole;
     //所有节点信息，包括地址、matchIndex、nextIndex等
     private NodeGroup nodeGroup;
 
@@ -79,16 +80,20 @@ public class NodeImpl implements Node {
         return false;
     }
 
-    //TODO:becomeToRole
     private void becomeToRole(AbstractRole targetRole) {
         currentRole = targetRole;
         //设置超时任务
         if(targetRole instanceof FollowerRole) {
-
+            //设置心跳超时任务
         } else if(targetRole instanceof  CandidateRole) {
-
+            //重设选举超时任务
+        } else { //LeaderRole
+            //定时发送心跳包任务
         }
         registerHandler(targetRole);
+    }
+    private void logReplicationTask() {
+
     }
     private void registerHandler(AbstractRole targetRole) {
         Class clazz = targetRole.getClass();
@@ -112,9 +117,8 @@ public class NodeImpl implements Node {
             return new CandidateMessageHandler(logger);
         } else if(roleClazz == FollowerRole.class){
             return new FollowerMessageHandler(logger);
-        } else {
+        } else { //TODO:不可能出现的情况，方便调试，Remove it
             logger.error("cannot find MessageHandler, role type is {}", roleClazz);
-            //TODO：抛异常
             return null;
         }
     }
@@ -172,9 +176,11 @@ public class NodeImpl implements Node {
             long term = appendRequestMsg.getTerm();
             if(term >= currentRole.getCurrentTerm()) {
                 logger.debug("receive AppendEntriesResultMessage, term is {}", term);
-                //TODO：取消选举超时任务
                 electionTimeoutFuture.cancel(true);
+
+                //TODO：断开与其他节点的网络连接
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
                 long preTerm = appendRequestMsg.getPreLogTerm();
                 long preLogIndex = appendRequestMsg.getPreLogIndex();
@@ -200,8 +206,7 @@ public class NodeImpl implements Node {
                 return new RequestVoteResultMessage(currentTerm, false);
                 //如果requestVoteMessage.term > currentTerm，如果自己的日志更加新则不投票，否则投票。变成Follower
             } else {
-                //TODO:添加实现
-                //为进行测试，默认不投票
+                //TODO：断开与其他节点的网络连接
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), currentTerm));
                 logger.debug("voteFor {}", requestVoteMessage.getCandidateId());
                 //rpcHandler.sendRequestVoteResultMessage(currentTerm, false, nodeEndpoint);
@@ -249,11 +254,13 @@ public class NodeImpl implements Node {
                 //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
                 long nextIndex = log.getLastLogIndex();
                 nodeGroup.resetReplicationState(nextIndex);
-                //构造空的AppendEntriesMessage
-                AppendEntriesMessage message =
-                        log.createAppendEntriesMessage(currentNodeId, currentTerm, nextIndex + 1);
-                logger.debug("send empty AppendEntriesMessage {} to all node", message);
-                rpcHandler.sendAppendEntriesMessage(message, allNodeEndpoint);
+
+                log.appendEmptyEntry(term);
+//                //构造空的AppendEntriesMessage
+//                AppendEntriesMessage message =
+//                        log.createAppendEntriesMessage(currentNodeId, currentTerm, nextIndex + 1);
+//                logger.debug("send empty AppendEntriesMessage {} to all node", message);
+//                rpcHandler.sendAppendEntriesMessage(message, allNodeEndpoint);
             }
         }
 
@@ -280,14 +287,17 @@ public class NodeImpl implements Node {
                 return new AppendEntriesResultMessage(currentTerm, false);
             }
             if(currentTerm < term) {
+                //TODO：断开与其他节点的网络连接，保留与Leader的连接
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
             }
 
             List<Entry> entryList = appendRequestMsg.getLogEntryList();
+
             long preTerm = appendRequestMsg.getPreLogTerm();
             long preLogIndex = appendRequestMsg.getPreLogIndex();
             long currentLogIndex = entryList.get(0).getIndex();
 
+            //Leader会定时发送AppendEntriesMessage，但是里面可能没有新的日志，作为心跳消息
             if(log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
                 return new AppendEntriesResultMessage(currentTerm, true);
             }
@@ -330,14 +340,22 @@ public class NodeImpl implements Node {
         public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
             logger.warn("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
             long term = appendRequestMsg.getTerm();
-            if(term > currentRole.getCurrentTerm()) {
-                logger.info("become Follower from Leader");
-                //TODO:设置选举超时任务
+            long currentTerm = currentRole.getCurrentTerm();
+            if(term > currentTerm) {
+                logger.info("become Follower from Leader, new term is {}", term);
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
-                logger.info("begin to commit");
-                return null;
+
+                List<Entry> entryList = appendRequestMsg.getLogEntryList();
+                long preTerm = appendRequestMsg.getPreLogTerm();
+                long preLogIndex = appendRequestMsg.getPreLogIndex();
+                long currentLogIndex = entryList.get(0).getIndex();
+
+                if(log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
+                    return new AppendEntriesResultMessage(term, false);
+                }
+                return new AppendEntriesResultMessage(term, true);
             }
-            return null;
+            return new AppendEntriesResultMessage(currentTerm, false);
         }
 
         @Override
@@ -346,8 +364,8 @@ public class NodeImpl implements Node {
             long term = requestVoteMessage.getTerm();
             if(term > currentRole.getCurrentTerm()) {
                 logger.info("become Follower from Leader");
-                //TODO:设置选举超时任务
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+
                 return new RequestVoteResultMessage(term, true);
             }
             return new RequestVoteResultMessage(currentRole.getCurrentTerm(), false);
@@ -360,7 +378,7 @@ public class NodeImpl implements Node {
 
         @Override
         public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
-            logger.debug("receive AppendEntriesResultMessage: {}", appendEntriesResultMessage);
+            logger.debug("receive AppendEntriesResultMessage: {}, but current role is Leader", appendEntriesResultMessage);
 
             long term = appendEntriesResultMessage.getTerm();
             boolean success = appendEntriesResultMessage.isSuccess();
@@ -388,18 +406,17 @@ public class NodeImpl implements Node {
             GroupMember member = nodeGroup.getGroupMember(fromId);
             //preLogTerm and preLogIndex 不匹配，减少 nextIndex 并重试
             member.getReplicationState().decNextIndex(1);
-            //创建 AppendEntriesMessage
-            long nextIndex = member.getReplicationState().getNextIndex();
-            AppendEntriesMessage message =
-                    log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm(), nextIndex);
-            //获取地址信息
-            NodeEndpoint nodeEndpoint = getNodeEndpoint(fromId);
-            List<NodeEndpoint> list = new ArrayList<>(1);
-            list.add(nodeEndpoint);
-            //发送
-            rpcHandler.sendAppendEntriesMessage(message, list);
-            /*TODO：ReplicationState 由谁负责：matchIndex和nextIndex，由log维护？
-             */
+//            //创建 AppendEntriesMessage
+//            long nextIndex = member.getReplicationState().getNextIndex();
+//            AppendEntriesMessage message =
+//                    log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm(), nextIndex);
+//            //获取地址信息
+//            NodeEndpoint nodeEndpoint = getNodeEndpoint(fromId);
+//            List<NodeEndpoint> list = new ArrayList<>(1);
+//            list.add(nodeEndpoint);
+//            //发送
+//            rpcHandler.sendAppendEntriesMessage(message, list);
+              //TODO:完成Leader的日志复制以及心跳消息
         }
     }
 }

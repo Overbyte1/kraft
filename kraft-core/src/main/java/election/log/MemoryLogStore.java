@@ -5,6 +5,7 @@ import election.log.entry.EntryMeta;
 
 import java.util.List;
 
+//TODO:保证线程安全
 public class MemoryLogStore implements LogStore {
     private List<Entry> entryList;
     private int lastLogIndex;
@@ -17,7 +18,7 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public Entry getLastEntry() {
-        int listIndex = getListIndex(lastLogIndex);
+        int listIndex = toListIndex(lastLogIndex);
         return entryList.get(listIndex);
     }
 
@@ -29,7 +30,7 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public List<Entry> getLogEntriesFrom(long logIndex) {
-        int fromIndex = getListIndex(logIndex);
+        int fromIndex = toListIndex(logIndex);
         return entryList.subList(fromIndex, entryList.size());
     }
 
@@ -43,8 +44,13 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
+    public void appendEntry(Entry entry) {
+        entryList.add(entry);
+    }
+
+    @Override
     public boolean deleteLogEntriesFrom(long logIndex) {
-        int fromIndex = getListIndex(logIndex);
+        int fromIndex = toListIndex(logIndex);
         for(int i = entryList.size(); i >= fromIndex; i--) {
             entryList.remove(i);
         }
@@ -63,8 +69,12 @@ public class MemoryLogStore implements LogStore {
         return lastLogIndex;
     }
 
-    private int getListIndex(long logIndex) {
+    private int toListIndex(long logIndex) {
         return (int) (logIndex - offset);
+    }
+
+    private long toLogIndex(int listIndex) {
+        return listIndex + offset;
     }
 
 }

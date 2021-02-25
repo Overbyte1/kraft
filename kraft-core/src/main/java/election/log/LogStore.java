@@ -18,6 +18,8 @@ public interface LogStore {
 
     boolean appendEntries(List<Entry> logs);
 
+    void appendEntry(Entry entry);
+
     boolean deleteLogEntriesFrom(long logIndex);
 
     boolean match(long logIndex, long preTerm, long preLogIndex);
