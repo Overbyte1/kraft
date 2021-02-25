@@ -55,7 +55,7 @@ public class MemoryLogStore implements LogStore {
     public boolean match(long logIndex, long preTerm, long preLogIndex) {
 
         EntryMeta entryMata = getEntryMata(logIndex - 1);
-        return entryMata.getPreLogIndex() == preLogIndex && entryMata.getTerm() == preTerm;
+        return entryMata.getLogIndex() == preLogIndex && entryMata.getTerm() == preTerm;
     }
 
     @Override

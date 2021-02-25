@@ -24,4 +24,25 @@ public class NodeGroup {
     public Collection<GroupMember> getAllGroupMember() {
         return nodesMap.values();
     }
+
+    public void resetReplicationState(long lastLogIndex) {
+        for (GroupMember member : nodesMap.values()) {
+            member.resetReplicationState(lastLogIndex);
+        }
+    }
+    //判断matchIndex是否过半
+    public boolean isMajorMatchIndex(long index) {
+        ReplicationState replicationState = null;
+        int majorNum = (nodesMap.size() + 1) / 2;
+        for (GroupMember member : nodesMap.values()) {
+            replicationState = member.getReplicationState();
+            if(replicationState.getMatchIndex() >= index) {
+                majorNum--;
+            }
+            if(majorNum == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

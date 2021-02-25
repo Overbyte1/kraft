@@ -8,5 +8,6 @@ public class DefaultStateMachine implements StateMachine {
     @Override
     public boolean apply() {
         logger.debug("DefaultMachine apply method was called!");
+        return false;
     }
 }

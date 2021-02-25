@@ -219,37 +219,42 @@ public class NodeImpl implements Node {
         @Override
         public void handleRequestVoteResult(RequestVoteResultMessage voteResultMessage) {
             long term = voteResultMessage.getTerm();
+            long currentTerm = currentRole.getCurrentTerm();
             boolean voteGranted = voteResultMessage.isVoteGranted();
-
-            if(term > currentRole.getCurrentTerm()) {
-                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+            NodeId currentNodeId = currentRole.getNodeId();
+            if(term > currentTerm) {
+                becomeToRole(new FollowerRole(currentNodeId, term));
                 return;
             }
             if(!voteGranted) {
                 return;
             }
             if(!(currentRole instanceof CandidateRole)) {
-                logger.debug("receive requestVoteResult, but current role was not Candidate!");
+                logger.debug("receive requestVoteResult: {}, but current role was not Candidate!", voteResultMessage);
                 return;
             }
+            //投票结果为 true
             CandidateRole candidateRole = (CandidateRole)currentRole;
             candidateRole.incVoteCount();
             logger.debug("receive vote counts are {}, major count is {}", candidateRole.getVoteCount(),
                     nodeGroup.getSize() / 2);
             //票数过半，转换成Leader，取消选举超时任务，发送空的AppendEntries消息
             if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
-                becomeToRole(new LeaderRole(currentRole.getNodeId(), term));
+                becomeToRole(new LeaderRole(currentNodeId, term));
                 //取消选举超时任务
                 electionTimeoutFuture.cancel(true);
-                logger.info("current node {} become leader,current term is {}", currentRole.getNodeId(), currentRole.getCurrentTerm());
+                logger.info("current node {} become leader,current term is {}", currentNodeId, currentTerm);
                 //TODO:发送空的AppendEntries消息
                 Set<NodeEndpoint> allNodeEndpoint = getAllNodeEndpoint();
                 //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
-//                rpcHandler.sendAppendEntriesMessage(, currentRole.getCurrentTerm(),
-//                        allNodeEndpoint);
-
+                long nextIndex = log.getLastLogIndex();
+                nodeGroup.resetReplicationState(nextIndex);
+                //构造空的AppendEntriesMessage
+                AppendEntriesMessage message =
+                        log.createAppendEntriesMessage(currentNodeId, currentTerm, nextIndex + 1);
+                logger.debug("send empty AppendEntriesMessage {} to all node", message);
+                rpcHandler.sendAppendEntriesMessage(message, allNodeEndpoint);
             }
-
         }
 
         @Override
@@ -356,21 +361,37 @@ public class NodeImpl implements Node {
         @Override
         public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
             logger.debug("receive AppendEntriesResultMessage: {}", appendEntriesResultMessage);
+
             long term = appendEntriesResultMessage.getTerm();
             boolean success = appendEntriesResultMessage.isSuccess();
+
             if(success) {
                 //TODO：commitIndex推进需要过半matchIndex以及term，只有日志条目的term和自己的term一致才能更新commitIndex
+                /*
+                如果存在一个满足 N > commitIndex的 N，并且大多数的 matchIndex[i] ≥ N成立，
+                并且 log[N].term == currentTerm 成立，那么令 commitIndex 等于这个 N
+                 */
+                ReplicationState replicationState = nodeGroup.getGroupMember(fromId).getReplicationState();
+                replicationState.incMatchIndex();
+                replicationState.incNextIndex();
+                //判断matchIndex是否过半
+                //nodeGroup.isMajorMatchIndex(0);
+                log.advanceCommit(currentRole.getCurrentTerm());
+                return;
             }
+
             //fail
             if(term > currentRole.getCurrentTerm()) {
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
                 return;
             }
+            GroupMember member = nodeGroup.getGroupMember(fromId);
             //preLogTerm and preLogIndex 不匹配，减少 nextIndex 并重试
-            log.decNextIndex(fromId);
+            member.getReplicationState().decNextIndex(1);
             //创建 AppendEntriesMessage
+            long nextIndex = member.getReplicationState().getNextIndex();
             AppendEntriesMessage message =
-                    log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm());
+                    log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm(), nextIndex);
             //获取地址信息
             NodeEndpoint nodeEndpoint = getNodeEndpoint(fromId);
             List<NodeEndpoint> list = new ArrayList<>(1);

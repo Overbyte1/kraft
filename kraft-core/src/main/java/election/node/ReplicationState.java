@@ -1,27 +1,42 @@
 package election.node;
 
 public class ReplicationState {
-    private int nextIndex;
-    private int matchIndex;
+    private long nextIndex;
+    private long matchIndex;
 
-    public ReplicationState(int nextIndex, int matchIndex) {
+    public ReplicationState(long nextIndex, long matchIndex) {
         this.nextIndex = nextIndex;
         this.matchIndex = matchIndex;
     }
 
-    public int getNextIndex() {
+    public long getNextIndex() {
         return nextIndex;
     }
 
-    public void setNextIndex(int nextIndex) {
+    public void setNextIndex(long nextIndex) {
         this.nextIndex = nextIndex;
     }
 
-    public int getMatchIndex() {
+    public long getMatchIndex() {
         return matchIndex;
     }
 
-    public void setMatchIndex(int matchIndex) {
+    public void setMatchIndex(long matchIndex) {
         this.matchIndex = matchIndex;
+    }
+    public void incNextIndex(long n) {
+        nextIndex += n;
+    }
+    public void incNextIndex() {
+        incNextIndex(1);
+    }
+    public void decNextIndex(long n) {
+        nextIndex -= n;
+    }
+    public void incMatchIndex(long n) {
+        matchIndex += n;
+    }
+    public void incMatchIndex() {
+        incMatchIndex(1);
     }
 }

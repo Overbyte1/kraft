@@ -20,6 +20,9 @@ import rpc.message.AbstractMessage;
 import rpc.message.MessageType;
 import rpc.message.RequestVoteMessage;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CodecTest {
     @Test
     public void testCodecServer() throws InterruptedException {
@@ -110,6 +113,14 @@ public class CodecTest {
         test("ddd");
         test("abc", "aaa");
         Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    }
+    @Test
+    public void testSubList() {
+        List<Integer> list = new ArrayList<>();
+        list.add(1);
+        List<Integer> subList = list.subList(1, 1);
+        System.out.println(subList.size());
 
     }
 

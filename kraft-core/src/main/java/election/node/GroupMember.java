@@ -26,4 +26,9 @@ public class GroupMember {
     public void setReplicationState(ReplicationState replicationState) {
         this.replicationState = replicationState;
     }
+
+    public void resetReplicationState(long lastLogIndex) {
+        replicationState.setMatchIndex(0);
+        replicationState.setNextIndex(lastLogIndex);
+    }
 }
