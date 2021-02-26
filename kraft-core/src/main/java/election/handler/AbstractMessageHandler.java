@@ -22,16 +22,17 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
         NodeId nodeId = abstractMessage.getNodeId();
         NodeEndpoint nodeEndpoint = nodeGroup.getGroupMember(nodeId).getNodeEndpoint();
         //根据消息类型选择不同的处理器
+        //TODO:策略模式？
         Class<?> messageClass = abstractMessage.getBody().getClass();
         if(messageClass == RequestVoteMessage.class) {
-            RequestVoteResultMessage resultMessage = handleRequestVoteRequest((RequestVoteMessage) abstractMessage.getBody());
+            RequestVoteResultMessage resultMessage = handleRequestVoteRequest(abstractMessage);
             rpcHandler.sendRequestVoteResultMessage(resultMessage, nodeEndpoint);
         } else if(messageClass == RequestVoteResultMessage.class) {
-            handleRequestVoteResult((RequestVoteResultMessage) abstractMessage.getBody());
+            handleRequestVoteResult(abstractMessage);
         } else if(messageClass == AppendEntriesMessage.class) {
-            handleAppendEntriesRequest((AppendEntriesMessage)abstractMessage.getBody());
+            handleAppendEntriesRequest(abstractMessage);
         }else if(messageClass == AppendEntriesResultMessage.class) {
-            handleAppendEntriesResult((AppendEntriesResultMessage) abstractMessage.getBody(), nodeId);
+            handleAppendEntriesResult(abstractMessage);
         }
         //TODO：添加其余判断
 
@@ -41,22 +42,22 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
     }
 
     @Override
-    public AppendEntriesResultMessage handleAppendEntriesRequest(AppendEntriesMessage appendRequestMsg) {
+    public AppendEntriesResultMessage handleAppendEntriesRequest(AbstractMessage<AppendEntriesMessage> message) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public RequestVoteResultMessage handleRequestVoteRequest(RequestVoteMessage requestVoteMessage) {
+    public RequestVoteResultMessage handleRequestVoteRequest(AbstractMessage<RequestVoteMessage> message) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void handleRequestVoteResult(RequestVoteResultMessage voteResultMessage) {
+    public void handleRequestVoteResult(AbstractMessage<RequestVoteResultMessage> message) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void handleAppendEntriesResult(AppendEntriesResultMessage appendEntriesResultMessage, NodeId fromId) {
+    public void handleAppendEntriesResult(AbstractMessage<AppendEntriesResultMessage> message) {
         throw new UnsupportedOperationException();
     }
 }

@@ -3,13 +3,20 @@ package election.log;
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 //TODO:保证线程安全
 public class MemoryLogStore implements LogStore {
     private List<Entry> entryList;
     private int lastLogIndex;
-    private int offset = 0;
+    private int offset;
+
+    public MemoryLogStore() {
+        entryList = new ArrayList<>();
+        lastLogIndex = 0;
+        offset = 0;
+    }
 
     @Override
     public Entry getLogEntry(long logIndex) {

@@ -12,6 +12,8 @@ public interface RpcHandler {
 
     void sendRequestVoteMessage(RequestVoteMessage message, Collection<NodeEndpoint> nodeEndpoints);
 
+    void sendAppendEntriesMessage(AppendEntriesMessage message, NodeEndpoint nodeEndpoint);
+
     void sendAppendEntriesMessage(AppendEntriesMessage message, Collection<NodeEndpoint> nodeEndpoints);
 
     void sendRequestVoteResultMessage(RequestVoteResultMessage message, NodeEndpoint nodeEndpoint);

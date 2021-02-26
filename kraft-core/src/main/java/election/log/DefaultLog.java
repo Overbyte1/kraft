@@ -6,20 +6,32 @@ import election.log.entry.EntryMeta;
 import election.log.entry.EntryType;
 import election.node.NodeGroup;
 import election.node.NodeId;
-import election.node.ReplicationState;
 import election.statemachine.StateMachine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rpc.message.AppendEntriesMessage;
 import rpc.message.RequestVoteMessage;
 
 import java.util.List;
 
 public class DefaultLog {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultLog.class);
+
     private long commitIndex;
     private long lastApplied;
     private LogStore logStore;
     private StateMachine stateMachine;
-    private ReplicationState replicationState;
     private NodeGroup nodeGroup;
+
+    public DefaultLog(LogStore logStore, StateMachine stateMachine, NodeGroup nodeGroup) {
+        this.logStore = logStore;
+        this.stateMachine = stateMachine;
+        this.nodeGroup = nodeGroup;
+        init();
+    }
+    private void init() {
+
+    }
 
     public synchronized boolean advanceCommit(long currentTerm) {
         EntryMeta entryMata = logStore.getEntryMata(commitIndex);
@@ -60,7 +72,7 @@ public class DefaultLog {
         this.stateMachine = stateMachine;
     }
     public void apply() {
-
+        logger.info("apply() was called");
     }
 
     public boolean appendEntries(long preTerm, long preLogIndex, long logIndex, List<Entry> entryList) {

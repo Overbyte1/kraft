@@ -89,6 +89,11 @@ public class RpcHandlerImpl implements RpcHandler {
     }
 
     @Override
+    public void sendAppendEntriesMessage(AppendEntriesMessage message, NodeEndpoint nodeEndpoint) {
+        sendMessage(nodeEndpoint, message);
+    }
+
+    @Override
     public void sendAppendEntriesMessage(AppendEntriesMessage message, Collection<NodeEndpoint> nodeEndpoints) {
         //AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, preLogTerm, preLogIndex, logEntryList);
         for (NodeEndpoint nodeEndpoint : nodeEndpoints) {
