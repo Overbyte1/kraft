@@ -1,7 +1,6 @@
 package rpc.message;
 
 import election.log.entry.Entry;
-import election.log.entry.LogEntry;
 import election.node.NodeId;
 
 import java.io.Serializable;
@@ -15,14 +14,16 @@ public class AppendEntriesMessage implements Serializable {
     private long preLogTerm;
     //Leader的上一个日志的index
     private long preLogIndex;
+    private long leaderCommit;
     //发送的日志，为了提高效率可能一次性发送多个
     private List<Entry> entryList;
 
-    public AppendEntriesMessage(long term, NodeId leaderId, long preLogTerm, long preLogIndex, List<Entry> entryList) {
+    public AppendEntriesMessage(long term, NodeId leaderId, long preLogTerm, long preLogIndex, long leaderCommit, List<Entry> entryList) {
         this.term = term;
         this.leaderId = leaderId;
         this.preLogTerm = preLogTerm;
         this.preLogIndex = preLogIndex;
+        this.leaderCommit = leaderCommit;
         this.entryList = entryList;
     }
 
@@ -56,6 +57,22 @@ public class AppendEntriesMessage implements Serializable {
 
     public void setPreLogIndex(long preLogIndex) {
         this.preLogIndex = preLogIndex;
+    }
+
+    public long getLeaderCommit() {
+        return leaderCommit;
+    }
+
+    public void setLeaderCommit(long leaderCommit) {
+        this.leaderCommit = leaderCommit;
+    }
+
+    public List<Entry> getEntryList() {
+        return entryList;
+    }
+
+    public void setEntryList(List<Entry> entryList) {
+        this.entryList = entryList;
     }
 
     public List<Entry> getLogEntryList() {

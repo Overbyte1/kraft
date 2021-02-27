@@ -16,7 +16,7 @@ public interface LogStore {
 
     List<Entry> getLogEntriesFrom(long logIndex);
 
-    boolean appendEntries(List<Entry> logs);
+    boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs);
 
     void appendEntry(Entry entry);
 

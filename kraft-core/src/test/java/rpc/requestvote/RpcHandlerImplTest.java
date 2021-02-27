@@ -71,6 +71,7 @@ public class RpcHandlerImplTest {
         rpcHandler.initialize();
         node.start();
         Thread.sleep(10000000);
+        //TODO:完善日志
     }
     @After
     public void waitThread() throws InterruptedException {

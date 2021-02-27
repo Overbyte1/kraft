@@ -4,6 +4,7 @@ import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 //TODO:保证线程安全
@@ -13,14 +14,14 @@ public class MemoryLogStore implements LogStore {
     private int offset;
 
     public MemoryLogStore() {
-        entryList = new ArrayList<>();
+        entryList = Collections.synchronizedList(new ArrayList<>());
         lastLogIndex = 0;
         offset = 0;
     }
 
     @Override
     public Entry getLogEntry(long logIndex) {
-        return entryList.get((int) (logIndex - offset));
+        return entryList.get(toListIndex(logIndex));
     }
 
     @Override
@@ -41,22 +42,39 @@ public class MemoryLogStore implements LogStore {
         return entryList.subList(fromIndex, entryList.size());
     }
 
+    /**
+     * 附加日志，需要保证线程安全
+     * @param preTerm
+     * @param preLogIndex
+     * @param logs
+     * @return
+     */
     @Override
-    public boolean appendEntries(List<Entry> logs) {
-        boolean res = entryList.addAll(logs);
-        if(res) {
-            lastLogIndex += logs.size();
+    public synchronized boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs) {
+        //心跳日志
+        if(logs.size() == 0) {
+            return true;
         }
-        return res;
+        long index = logs.get(0).getIndex();
+        //判断index位置处的preTerm与preLogIndex是否匹配
+        if(match(index, preTerm, preLogIndex)) {
+            boolean res = entryList.addAll(logs);
+            if(res) {
+                lastLogIndex += logs.size();
+            }
+            return res;
+        }
+        return false;
     }
 
     @Override
-    public void appendEntry(Entry entry) {
+    public synchronized void appendEntry(Entry entry) {
+        entry.setIndex(lastLogIndex);
         entryList.add(entry);
     }
 
     @Override
-    public boolean deleteLogEntriesFrom(long logIndex) {
+    public synchronized boolean deleteLogEntriesFrom(long logIndex) {
         int fromIndex = toListIndex(logIndex);
         for(int i = entryList.size(); i >= fromIndex; i--) {
             entryList.remove(i);
@@ -83,5 +101,6 @@ public class MemoryLogStore implements LogStore {
     private long toLogIndex(int listIndex) {
         return listIndex + offset;
     }
+
 
 }

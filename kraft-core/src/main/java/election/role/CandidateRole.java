@@ -4,6 +4,7 @@ import election.node.NodeId;
 
 public class CandidateRole extends AbstractRole {
     //当前已经获取的票数
+    //TODO:考虑AtomicInteger，对比LongAdder进行选择
     private int voteCount = 1;
     //TODO：总票数如何统计？需要考虑节点的动态变更
     public CandidateRole(long currentTerm) {

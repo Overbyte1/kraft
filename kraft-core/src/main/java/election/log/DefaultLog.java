@@ -77,7 +77,7 @@ public class DefaultLog {
 
     public boolean appendEntries(long preTerm, long preLogIndex, long logIndex, List<Entry> entryList) {
         if(!isMatch(preTerm, preLogIndex, logIndex)) {
-            return logStore.appendEntries(entryList);
+            return logStore.appendEntries(preTerm, preLogIndex, entryList);
         }
         return false;
     }

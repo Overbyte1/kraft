@@ -1,7 +1,7 @@
 package election.role;
 
 import election.node.NodeId;
-import election.log.entry.LogEntry;
+import election.log.entry.GeneralEntry;
 import election.node.NodeIdGenerator;
 
 import java.util.List;
@@ -19,7 +19,7 @@ public abstract class AbstractRole {
     //投票给的那个节点
     private NodeId voteFor;
     //所有日志，TODO：考虑持久化
-    private List<LogEntry> logEntryList;
+    private List<GeneralEntry> generalEntryList;
 
     /*易失性数据*/
     //已知已提交的最高的日志条目的索引（初始值为0，单调递增）
@@ -80,12 +80,12 @@ public abstract class AbstractRole {
         this.voteFor = voteFor;
     }
 
-    public List<LogEntry> getLogEntryList() {
-        return logEntryList;
+    public List<GeneralEntry> getGeneralEntryList() {
+        return generalEntryList;
     }
 
-    public void setLogEntryList(List<LogEntry> logEntryList) {
-        this.logEntryList = logEntryList;
+    public void setGeneralEntryList(List<GeneralEntry> generalEntryList) {
+        this.generalEntryList = generalEntryList;
     }
 
 }
