@@ -18,6 +18,8 @@ public interface Log {
      */
     boolean advanceCommit(long currentTerm, long n);
 
+    boolean updateReplicationState(ReplicationState state);
+
     /**
      * 判断当前节点最后一条日志是否比给定的 lastTerm、lastLogIndex对应的日志 新，
      * 在当前节点的角色是Candidate并且收到请求投票消息时会被调用

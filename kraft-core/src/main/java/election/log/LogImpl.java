@@ -25,7 +25,12 @@ public class LogImpl implements Log {
     }
 
     /**
-     * 增加commitIndex，只会被Leader调用
+     * 增加commitIndex，只会被Leader调用,
+     * TODO：commitIndex推进需要过半matchIndex以及term，只有日志条目的term和自己的term一致才能更新commitIndex
+     *
+     * 如果存在一个满足 N > commitIndex的 N，并且大多数的 matchIndex[i] ≥ N成立，
+     * 并且 log[N].term == currentTerm 成立，那么令 commitIndex 等于这个 N
+     *
      * @param currentTerm
      * @param n 增加的值，n > 0
      * @return
@@ -39,6 +44,17 @@ public class LogImpl implements Log {
             commitIndex++;
             //apply(logStore.getLogEntry(idx));
             return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean updateReplicationState(ReplicationState replicationState) {
+        //TODO:需要确定replicationState matchIndex与nextIndex增加的幅度
+        replicationState.incMatchIndex();
+        long lastLogIndex = logStore.getLastLogIndex();
+        if(lastLogIndex > replicationState.getNextIndex()) {
+            replicationState.incNextIndex();
         }
         return false;
     }
