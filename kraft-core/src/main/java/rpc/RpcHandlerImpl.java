@@ -129,4 +129,23 @@ public class RpcHandlerImpl implements RpcHandler {
         }
     }
 
+    public static Logger getLogger() {
+        return logger;
+    }
+
+    public EventLoopGroup getBossGroup() {
+        return bossGroup;
+    }
+
+    public EventLoopGroup getWorkerGroup() {
+        return workerGroup;
+    }
+
+    public ChannelGroup getChannelGroup() {
+        return channelGroup;
+    }
+
+    public int getPort() {
+        return port;
+    }
 }

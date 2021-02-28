@@ -14,7 +14,7 @@ import schedule.TaskScheduleExecutor;
 public class RpcHandlerImplTest1 {
     private int port;
     private ChannelGroup channelGroup;
-    private RpcHandler rpcHandler;
+    private RpcHandlerImpl rpcHandler;
     private NodeImpl node;
     @Before
     public void init() {

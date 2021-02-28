@@ -53,6 +53,28 @@ public class RequestVoteMessage implements Serializable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RequestVoteMessage message = (RequestVoteMessage) o;
+
+        if (term != message.term) return false;
+        if (lastLogIndex != message.lastLogIndex) return false;
+        if (lastLogTerm != message.lastLogTerm) return false;
+        return candidateId != null ? candidateId.equals(message.candidateId) : message.candidateId == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (term ^ (term >>> 32));
+        result = 31 * result + (candidateId != null ? candidateId.hashCode() : 0);
+        result = 31 * result + (int) (lastLogIndex ^ (lastLogIndex >>> 32));
+        result = 31 * result + (int) (lastLogTerm ^ (lastLogTerm >>> 32));
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "RequestVoteMessage{" +
                 "term=" + term +

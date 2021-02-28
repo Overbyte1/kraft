@@ -13,6 +13,9 @@ public class GroupMember {
         this.replicationState = replicationState;
         this.nodeEndpoint = nodeEndpoint;
     }
+    public GroupMember(NodeEndpoint nodeEndpoint) {
+        this.nodeEndpoint = nodeEndpoint;
+    }
 
     public NodeEndpoint getNodeEndpoint() {
         return nodeEndpoint;
@@ -36,6 +39,9 @@ public class GroupMember {
     }
 
     public boolean isReplicating() {
+        if(replicationState == null) {
+            replicationState = new ReplicationState(0, 0);
+        }
         return replicationState.isReplicating();
     }
 
@@ -70,5 +76,13 @@ public class GroupMember {
     }
     public void updateReplicationTime() {
         replicationState.setLastReplicationTime(System.currentTimeMillis());
+    }
+
+    @Override
+    public String toString() {
+        return "GroupMember{" +
+                "replicationState=" + replicationState +
+                ", nodeEndpoint=" + nodeEndpoint +
+                '}';
     }
 }

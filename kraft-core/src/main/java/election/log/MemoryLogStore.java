@@ -27,6 +27,7 @@ public class MemoryLogStore implements LogStore {
     @Override
     public Entry getLastEntry() {
         int listIndex = toListIndex(lastLogIndex);
+
         return entryList.get(listIndex);
     }
 
@@ -38,8 +39,17 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public List<Entry> getLogEntriesFrom(long logIndex) {
+        if(logIndex == 0) {
+            return new ArrayList<>();
+        }
         int fromIndex = toListIndex(logIndex);
-        return entryList.subList(fromIndex, entryList.size());
+        int endIndex = entryList.size();
+        List<Entry> list = new ArrayList<>(endIndex - fromIndex + 1);
+        while(fromIndex <= endIndex) {
+            list.add(entryList.get(fromIndex));
+            fromIndex++;
+        }
+        return list;
     }
 
     /**
@@ -71,6 +81,7 @@ public class MemoryLogStore implements LogStore {
     public synchronized void appendEntry(Entry entry) {
         entry.setIndex(lastLogIndex);
         entryList.add(entry);
+        lastLogIndex++;
     }
 
     @Override

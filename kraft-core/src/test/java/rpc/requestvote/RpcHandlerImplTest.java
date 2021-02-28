@@ -1,9 +1,7 @@
 package rpc.requestvote;
 
 import election.config.GlobalConfig;
-import election.log.DefaultLog;
-import election.log.LogStore;
-import election.log.MemoryLogStore;
+import election.log.*;
 import election.node.*;
 import election.role.AbstractRole;
 import election.role.FollowerRole;
@@ -21,7 +19,7 @@ public class RpcHandlerImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
     private int port;
     private ChannelGroup channelGroup;
-    private RpcHandler rpcHandler;
+    private RpcHandlerImpl rpcHandler;
     private NodeImpl node;
     private LogStore logStore;
     private StateMachine stateMachine;
@@ -39,8 +37,9 @@ public class RpcHandlerImplTest {
         AbstractRole role = new FollowerRole(nodeId, 0);
         logStore = new MemoryLogStore();
         stateMachine = null;
-        defaultLog = new DefaultLog(logStore, stateMachine, nodeGroup);;
-        node = new NodeImpl(nodeGroup, rpcHandler, scheduleExecutor, defaultLog, config, nodeId);
+        defaultLog = new DefaultLog(logStore, stateMachine, nodeGroup);
+        Log log = new LogImpl(logStore, stateMachine, 0, nodeGroup);
+        node = new NodeImpl(nodeGroup, rpcHandler, scheduleExecutor, log, config, nodeId);
     }
     private NodeGroup initNodeGroup() {
         NodeGroup nodeGroup = new NodeGroup();

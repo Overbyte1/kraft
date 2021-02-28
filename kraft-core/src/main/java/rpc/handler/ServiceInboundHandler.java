@@ -29,12 +29,12 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
 
     public void registerHandler(Class type, MessageHandler handler) {
         handlerMap.put(type, handler);
-        logger.debug("{} handler of {} was registered", handler, type);
+        //logger.debug("{} handler of {} was registered", handler, type);
     }
 
     public void unregisterHandler(Class type) {
         handlerMap.remove(type);
-        logger.debug("{} handler of {} was unregistered", handler, type);
+        //logger.debug("{} handler of {} was unregistered", handler, type);
     }
 
     @Override

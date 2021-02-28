@@ -84,6 +84,32 @@ public class AppendEntriesMessage implements Serializable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AppendEntriesMessage message = (AppendEntriesMessage) o;
+
+        if (term != message.term) return false;
+        if (preLogTerm != message.preLogTerm) return false;
+        if (preLogIndex != message.preLogIndex) return false;
+        if (leaderCommit != message.leaderCommit) return false;
+        if (leaderId != null ? !leaderId.equals(message.leaderId) : message.leaderId != null) return false;
+        return entryList != null ? entryList.equals(message.entryList) : message.entryList == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (term ^ (term >>> 32));
+        result = 31 * result + (leaderId != null ? leaderId.hashCode() : 0);
+        result = 31 * result + (int) (preLogTerm ^ (preLogTerm >>> 32));
+        result = 31 * result + (int) (preLogIndex ^ (preLogIndex >>> 32));
+        result = 31 * result + (int) (leaderCommit ^ (leaderCommit >>> 32));
+        result = 31 * result + (entryList != null ? entryList.hashCode() : 0);
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "AppendEntriesMessage{" +
                 "term=" + term +

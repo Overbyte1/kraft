@@ -83,7 +83,7 @@ public class DefaultLog {
     }
     public EmptyEntry appendEmptyEntry(long term) {
         //这是成为Leader后添加的第一条日志，其他上层应用的日志必须等待该条日志添加完毕才能添加，所以是线程安全的
-        EmptyEntry entry = new EmptyEntry(EntryType.Empty, term, logStore.getLastLogIndex() + 1);
+        EmptyEntry entry = new EmptyEntry(EntryType.Empty, term);
         logStore.appendEntry(entry);
         return entry;
     }
@@ -100,9 +100,9 @@ public class DefaultLog {
         //long nextIndex = replicationState.getNextIndex();
         EntryMeta entryMeta = logStore.getEntryMata(nextIndex);
         List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
-        AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
-                                        entryMeta.getLogIndex(), entryList);
-        return message;
+//        AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
+//                                        entryMeta.getLogIndex(), entryList);
+        return null;
     }
 
     public RequestVoteMessage createRequestVoteMessage(NodeId candidateId, long term) {

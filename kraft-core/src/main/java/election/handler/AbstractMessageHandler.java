@@ -30,7 +30,8 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
         } else if(messageClass == RequestVoteResultMessage.class) {
             handleRequestVoteResult(abstractMessage);
         } else if(messageClass == AppendEntriesMessage.class) {
-            handleAppendEntriesRequest(abstractMessage);
+            AppendEntriesResultMessage entriesResultMessage = handleAppendEntriesRequest(abstractMessage);
+            rpcHandler.sendAppendEntriesResultMessage(entriesResultMessage, nodeEndpoint);
         }else if(messageClass == AppendEntriesResultMessage.class) {
             handleAppendEntriesResult(abstractMessage);
         }

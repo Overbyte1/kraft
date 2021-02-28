@@ -2,9 +2,9 @@ package election.config;
 //参数，用于测试
 public class GlobalConfig {
     //单位是毫秒
-    private int minElectionTimeout = 3000;
-    private int maxElectionTimeout = 4000;
-    private int logReplicationInterval = 600;
+    private int minElectionTimeout = 4000;
+    private int maxElectionTimeout = 6000;
+    private int logReplicationInterval = 1500;
     private int logReplicationResultTimeout = 1200;
     private int connectTimeout = 800;
 

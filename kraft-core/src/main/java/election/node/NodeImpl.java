@@ -3,7 +3,6 @@ package election.node;
 import election.config.GlobalConfig;
 import election.exception.IndexException;
 import election.handler.*;
-import election.log.DefaultLog;
 import election.log.Log;
 import election.log.entry.Entry;
 import election.role.*;
@@ -34,9 +33,9 @@ public class NodeImpl implements Node {
 
     private NodeId currentNodeId;
 
-    private DefaultLog log;
+    //private DefaultLog log;
 
-    private Log log1;
+    private Log log;
 
     private Random random = new Random();
     //TODO：配置类
@@ -56,7 +55,7 @@ public class NodeImpl implements Node {
     }
 
     public NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduleExecutor scheduleExecutor,
-                    DefaultLog log, GlobalConfig config, NodeId currentNodeId) {
+                    Log log, GlobalConfig config, NodeId currentNodeId) {
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
         this.scheduleExecutor = scheduleExecutor;
@@ -94,6 +93,7 @@ public class NodeImpl implements Node {
 
     @Override
     public boolean apply(byte[] command) {
+//        log.appendGeneralEntry(currentRole.getCurrentTerm(), command);
         return false;
     }
 
@@ -103,11 +103,14 @@ public class NodeImpl implements Node {
         AbstractRole sourceRole = currentRole;
         if(sourceRole instanceof LeaderRole) {
             replicationTimeoutFuture.cancel(false);
+            //TODO：断开网络连接
         } else if(sourceRole instanceof FollowerRole) {
             replicationReadTimeoutFuture.cancel(false);
+            //清除所有member的ReplicationState避免内存泄漏
+            clearReplicationState();
         } else if(sourceRole instanceof CandidateRole){
             electionTimeoutFuture.cancel(false);
-            //TODO：断开网络连接
+            //TODO：targetRole不是Leader时需要断开网络连接
         }
         currentRole = targetRole;
         //设置超时任务
@@ -119,11 +122,27 @@ public class NodeImpl implements Node {
             int maxTimeout = config.getMaxElectionTimeout(), minTimeout = config.getMinElectionTimeout();
             int timeout = random.nextInt(maxTimeout - minTimeout) + minTimeout;
             electionTimeoutFuture = scheduleExecutor.schedule(this::electionTimeout, timeout, TimeUnit.MILLISECONDS );
-        } else { //LeaderRole
+        } else if(targetRole instanceof LeaderRole){ //LeaderRole
             //定时发送心跳包任务
             replicationTimeoutFuture = scheduleExecutor.schedule(this::logReplicationTask, config.getLogReplicationInterval(), TimeUnit.MILLISECONDS);
         }
         registerHandler(targetRole);
+    }
+    private void resetReplicationReadTimeoutTask() {
+        replicationReadTimeoutFuture.cancel(false);
+        replicationReadTimeoutFuture = scheduleExecutor.schedule(this::logReplicationReadTimeout, config.getLogReplicationResultTimeout(), TimeUnit.MILLISECONDS);
+
+    }
+
+    /**
+     * 当前节点的角色由Leader变为Follower后，需要清除ReplicationState
+     * TODO：考虑将ReplicationState进行拆分
+     */
+    private void clearReplicationState() {
+        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
+        for (GroupMember member : allGroupMember) {
+            member.setReplicationState(null);
+        }
     }
 
     /**
@@ -136,8 +155,8 @@ public class NodeImpl implements Node {
         for (GroupMember member : groupMembers) {
             //TODO：配置 以及 考虑隐藏 ReplicationState
             if(member.shouldReplication(config.getLogReplicationInterval())) {
-                AppendEntriesMessage message = log.createAppendEntriesMessage(currentRole.getNodeId(), currentRole.getCurrentTerm(),
-                        member.getReplicationState().getNextIndex());
+                AppendEntriesMessage message = log.createAppendEntriesMessage(currentNodeId,
+                        currentRole.getCurrentTerm(), member);
                 //更新日志发送时间
                 member.updateReplicationTime();
                 rpcHandler.sendAppendEntriesMessage(message, member.getNodeEndpoint());
@@ -174,23 +193,19 @@ public class NodeImpl implements Node {
 
     private void logReplicationReadTimeout() {
         logger.debug("log replication read timeout");
+        becomeToRole(new CandidateRole(currentNodeId, currentRole.getCurrentTerm()));
         startElection();
     }
 
     private void startElection() {
         logger.debug("start election, new term is {}", currentRole.getCurrentTerm() + 1);
 
-
-
         //将角色更改为Candidate，term + 1
         becomeToRole(new CandidateRole(currentRole.getNodeId(), currentRole.getCurrentTerm() + 1, null));
-        //提交选举超时任务
-//        electionTimeoutFuture = scheduleExecutor.schedule(this::electionTimeout, config.getMinElectionTimeout(),
-//                TimeUnit.MILLISECONDS);
+
         //向所有节点发送请求投票rpc
-        //TODO：设置lastLogIndex、lastLogTerm
-        rpcHandler.sendRequestVoteMessage(new RequestVoteMessage(currentRole.getCurrentTerm(), currentRole.getNodeId(),
-                0, 0), getAllNodeEndpoint());
+        RequestVoteMessage requestVoteMessage = log.createRequestVoteMessage(currentNodeId, currentRole.getCurrentTerm());
+        rpcHandler.sendRequestVoteMessage(requestVoteMessage, getAllNodeEndpoint());
     }
     private NodeEndpoint getNodeEndpoint(NodeId nodeId) {
         GroupMember groupMember = nodeGroup.getGroupMember(nodeId);
@@ -241,8 +256,10 @@ public class NodeImpl implements Node {
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
                 long preTerm = appendRequestMsg.getPreLogTerm();
                 long preLogIndex = appendRequestMsg.getPreLogIndex();
-                long currentLogIndex = entryList.get(0).getIndex();
-                if (log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
+                long leaderCommit = appendRequestMsg.getLeaderCommit();
+                ReplicationState state = nodeGroup.getGroupMember(message.getNodeId()).getReplicationState();
+
+                if (log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
                     return new AppendEntriesResultMessage(term, true);
                 }
             }
@@ -305,17 +322,15 @@ public class NodeImpl implements Node {
             //票数过半，转换成Leader，取消选举超时任务，发送空的AppendEntries消息
             if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
                 becomeToRole(new LeaderRole(currentNodeId, messageTerm));
-                //取消选举超时任务
-                //electionTimeoutFuture.cancel(true);
-                logger.info("current node {} become leader,current term is {}", currentNodeId, currentTerm);
-                //TODO:发送空的AppendEntries消息
-                //Set<NodeEndpoint> allNodeEndpoint = getAllNodeEndpoint();
-                //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
-                long nextIndex = log.getLastLogIndex();
-                nodeGroup.resetReplicationState(nextIndex);
 
+                logger.info("current node {} become leader,current term is {}", currentNodeId, currentTerm);
+
+                //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
+                //long nextIndex = log.getLastLogIndex();
+                //nodeGroup.resetReplicationState(nextIndex);
+
+                //构造空的AppendEntriesMessage
                 log.appendEmptyEntry(messageTerm);
-                //构造空的AppendEntriesMessage发送
 
             }
         }
@@ -362,7 +377,9 @@ public class NodeImpl implements Node {
 
             //Leader会定时发送AppendEntriesMessage，但是里面可能没有新的日志作为作为心跳消息
             GroupMember member = nodeGroup.getGroupMember(message.getNodeId());
-            if(log1.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, member.getReplicationState(), leaderCommit)) {
+            if(log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
+                //重设日志读取超时任务
+                resetReplicationReadTimeoutTask();
                 return new AppendEntriesResultMessage(currentTerm, true);
             }
             return new AppendEntriesResultMessage(currentTerm, false);
@@ -414,12 +431,13 @@ public class NodeImpl implements Node {
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
                 long preTerm = appendRequestMsg.getPreLogTerm();
                 long preLogIndex = appendRequestMsg.getPreLogIndex();
-                long currentLogIndex = entryList.get(0).getIndex();
+                long leaderCommit = appendRequestMsg.getLeaderCommit();
+                boolean success = false;
 
-                if(log.appendEntries(preTerm, preLogIndex, currentLogIndex, entryList)) {
-                    return new AppendEntriesResultMessage(term, false);
+                if(log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
+                    success = true;
                 }
-                return new AppendEntriesResultMessage(term, true);
+                return new AppendEntriesResultMessage(term, success);
             }
             return new AppendEntriesResultMessage(currentTerm, false);
         }
@@ -429,6 +447,7 @@ public class NodeImpl implements Node {
             RequestVoteMessage requestVoteMessage = message.getBody();
             logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
             long term = requestVoteMessage.getTerm();
+
             if(term > currentRole.getCurrentTerm()) {
                 logger.info("become Follower from Leader, new term is {}", term);
 
@@ -454,9 +473,8 @@ public class NodeImpl implements Node {
 
             if(success) {
                 ReplicationState replicationState = nodeGroup.getGroupMember(fromId).getReplicationState();
-                //TODO：获取commitIndex增加的值
-                log1.advanceCommit(currentRole.getCurrentTerm(), 1);
-                log1.updateReplicationState(replicationState);
+                log.advanceCommitForLeader(currentRole.getCurrentTerm(), entriesResultMessage.getLogNum());
+                log.updateReplicationState(replicationState);
                 return;
             }
             //fail
@@ -471,11 +489,12 @@ public class NodeImpl implements Node {
             //preLogTerm and preLogIndex 不匹配，减少 nextIndex 并重试
             GroupMember member = nodeGroup.getGroupMember(fromId);
             try {
+                //TODO：考虑二分查找进行优化，但需要修改AppendEntriesResultMessage消息格式
                 member.getReplicationState().decNextIndex(1);
             } catch (IndexException exception) {
                 logger.error("the nextIndex of node {} cannot be less than 0", fromId);
             }
-            //TODO:完成Leader的日志复制以及心跳消息。定时任务，通过记录每次的发送时间来判断是否要发送log消息
+            //完成Leader的日志复制以及心跳消息。定时任务，通过记录每次的发送时间来判断是否要发送log消息
         }
     }
 }

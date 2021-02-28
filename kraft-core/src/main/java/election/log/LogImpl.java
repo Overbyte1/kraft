@@ -1,6 +1,7 @@
 package election.log;
 
 import election.log.entry.*;
+import election.node.GroupMember;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.ReplicationState;
@@ -14,7 +15,7 @@ public class LogImpl implements Log {
     private LogStore logStore;
     private StateMachine stateMachine;
     private long commitIndex;
-    private long appiedIndex;
+    private long appliedIndex;
     private NodeGroup nodeGroup;
 
     public LogImpl(LogStore logStore, StateMachine stateMachine, long commitIndex, NodeGroup nodeGroup) {
@@ -36,7 +37,7 @@ public class LogImpl implements Log {
      * @return
      */
     @Override
-    public boolean advanceCommit(long currentTerm, long n) {
+    public boolean advanceCommitForLeader(long currentTerm, long n) {
         EntryMeta entryMata = logStore.getEntryMata(commitIndex);
         //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
         if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
@@ -77,7 +78,13 @@ public class LogImpl implements Log {
     }
 
     @Override
-    public AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, long nextIndex) {
+    public AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, GroupMember member) {
+        ReplicationState state = member.getReplicationState();
+        if(state == null) {
+            state = new ReplicationState(0, logStore.getLastLogIndex());
+            member.setReplicationState(state);
+        }
+        long nextIndex = state.getNextIndex();
         EntryMeta entryMeta = logStore.getEntryMata(nextIndex);
         List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
         AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
@@ -89,9 +96,13 @@ public class LogImpl implements Log {
     public RequestVoteMessage createRequestVoteMessage(NodeId candidateId, long term) {
         //TODO:需要保证原子性？
         long lastLogIndex = logStore.getLastLogIndex();
-        EntryMeta entryMata = logStore.getEntryMata(lastLogIndex);
+        long lastLogTerm = 0;
+        if(lastLogIndex > 0) {
+            EntryMeta entryMata = logStore.getEntryMata(lastLogIndex);
+            lastLogTerm = entryMata.getTerm();
+        }
 
-        return new RequestVoteMessage(term, candidateId, entryMata.getTerm(), entryMata.getLogIndex());
+        return new RequestVoteMessage(term, candidateId, lastLogTerm, lastLogIndex);
     }
 
     @Override
@@ -117,12 +128,12 @@ public class LogImpl implements Log {
 
     @Override
     public boolean appendGeneralEntriesFromLeader(long preTerm, long preLogIndex, List<Entry> entryList,
-                                                  ReplicationState state, long leaderCommit) {
+                                                  long leaderCommit) {
         boolean result = logStore.appendEntries(preTerm, preLogIndex, entryList);
         if(result) {
             //更新commitIndex、appliedIndex
             commitIndex = Math.min(leaderCommit, logStore.getLastLogIndex());
-            if(appiedIndex < commitIndex) {
+            if(appliedIndex < commitIndex) {
                 //TODO：异步执行命令
                 for (Entry entry : entryList) {
                     apply(((GeneralEntry)entry).getCommandBytes());
