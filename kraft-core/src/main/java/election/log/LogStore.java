@@ -18,7 +18,7 @@ public interface LogStore {
 
     boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs);
 
-    void appendEntry(Entry entry);
+    boolean appendEntry(Entry entry);
 
     boolean deleteLogEntriesFrom(long logIndex);
 

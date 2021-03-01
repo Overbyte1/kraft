@@ -99,4 +99,9 @@ public class NodeImplTest {
             e.printStackTrace();
         }
     }
+    @Test
+    public void testU() {
+        int[] arr = new int[]{0};
+        System.out.println(arr[1]);
+    }
 }
