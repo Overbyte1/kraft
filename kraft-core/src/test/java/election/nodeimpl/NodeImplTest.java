@@ -20,11 +20,15 @@ import rpc.NodeEndpoint;
 import rpc.RpcHandlerImpl;
 import rpc.requestvote.RpcHandlerImplTest;
 import schedule.SingleTaskScheduleExecutor;
+import schedule.SingleThreadTaskScheduler;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class NodeImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
@@ -82,7 +86,7 @@ public class NodeImplTest {
         stateMachine = null;
         rpcHandler = new RpcHandlerImpl(channelGroup, selfPort);
         defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
-        node = new NodeImpl(nodeGroup, rpcHandler, new SingleTaskScheduleExecutor(), defaultLog,
+        node = new NodeImpl(nodeGroup, rpcHandler, new SingleThreadTaskScheduler(), defaultLog,
                 new GlobalConfig(), selfNodeId);
 
     }
@@ -100,8 +104,14 @@ public class NodeImplTest {
         }
     }
     @Test
-    public void testU() {
-        int[] arr = new int[]{0};
-        System.out.println(arr[1]);
+    public void testU() throws InterruptedException {
+        ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+        ScheduledFuture<?> future = scheduledThreadPoolExecutor.scheduleWithFixedDelay(() -> {
+            System.out.println("hello");
+        }, 0, 1000, TimeUnit.MILLISECONDS);
+
+        Thread.sleep(3000);
+        future.cancel(false);
+        waiting();
     }
 }

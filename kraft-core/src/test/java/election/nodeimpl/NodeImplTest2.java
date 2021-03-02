@@ -20,6 +20,7 @@ import rpc.NodeEndpoint;
 import rpc.RpcHandlerImpl;
 import rpc.requestvote.RpcHandlerImplTest;
 import schedule.SingleTaskScheduleExecutor;
+import schedule.SingleThreadTaskScheduler;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,7 +83,7 @@ public class NodeImplTest2 {
         stateMachine = null;
         rpcHandler = new RpcHandlerImpl(channelGroup, selfPort);
         defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
-        node = new NodeImpl(nodeGroup, rpcHandler, new SingleTaskScheduleExecutor(), defaultLog,
+        node = new NodeImpl(nodeGroup, rpcHandler, new SingleThreadTaskScheduler(), defaultLog,
                 new GlobalConfig(), selfNodeId);
 
     }

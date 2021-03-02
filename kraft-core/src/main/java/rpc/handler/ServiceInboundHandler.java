@@ -39,7 +39,7 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        logger.debug("====================ServiceHandler channelRead() was called======================");
+        //logger.debug("====================ServiceHandler channelRead() was called======================");
         AbstractMessage abstractMessage = (AbstractMessage) msg;
         Object messageBody = abstractMessage.getBody();
         //TODO：根据消息类型选择处理器
@@ -64,7 +64,7 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("===================ServiceHandler channelActive was called=============================");
+        //logger.debug("===================ServiceHandler channelActive was called=============================");
         super.channelActive(ctx);
     }
 

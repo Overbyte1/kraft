@@ -1,6 +1,8 @@
 package election.log.entry;
 
-public abstract class Entry {
+import java.io.Serializable;
+
+public abstract class Entry implements Serializable {
     private int type;
     private long term;
     private long index;

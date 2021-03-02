@@ -13,7 +13,7 @@ import rpc.RpcHandler;
 import rpc.exception.NetworkException;
 import rpc.handler.ServiceInboundHandler;
 import rpc.message.*;
-import schedule.TaskScheduleExecutor;
+import schedule.*;
 
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
@@ -29,7 +29,9 @@ public class NodeImpl implements Node {
 
     private RpcHandler rpcHandler;
 
-    private TaskScheduleExecutor scheduleExecutor;
+    //private TaskScheduleExecutor scheduleExecutor;
+
+    private TaskScheduler taskScheduler;
 
     private NodeId currentNodeId;
 
@@ -41,24 +43,24 @@ public class NodeImpl implements Node {
     //TODO：配置类
     private GlobalConfig config;
 
-    ScheduledFuture<?> electionTimeoutFuture;
-    ScheduledFuture<?> replicationReadTimeoutFuture;
-    ScheduledFuture<?> replicationTimeoutFuture;
+    ElectionTimeoutFuture electionTimeoutFuture;
+    LogReplicationReadFuture replicationReadTimeoutFuture;
+    LogReplicationFuture replicationTimeoutFuture;
 
 
-    public NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduleExecutor scheduleExecutor, GlobalConfig config) {
+    public NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler, GlobalConfig config) {
         this.currentRole = currentRole;
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
-        this.scheduleExecutor = scheduleExecutor;
+        this.taskScheduler = taskScheduler;
         this.config = config;
     }
 
-    public NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduleExecutor scheduleExecutor,
+    public NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler,
                     Log log, GlobalConfig config, NodeId currentNodeId) {
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
-        this.scheduleExecutor = scheduleExecutor;
+        this.taskScheduler = taskScheduler;
         this.log = log;
         this.config = config;
         this.currentNodeId = currentNodeId;
@@ -97,40 +99,47 @@ public class NodeImpl implements Node {
         return false;
     }
 
-    private void becomeToRole(AbstractRole targetRole) {
+    private synchronized void becomeToRole(AbstractRole targetRole) {
+        if(targetRole.equals(currentRole)) {
+            return;
+        }
         logger.debug("current role become {} from {}", targetRole, currentRole);
 
         AbstractRole sourceRole = currentRole;
         if(sourceRole instanceof LeaderRole) {
-            replicationTimeoutFuture.cancel(false);
-            //TODO：断开网络连接
-        } else if(sourceRole instanceof FollowerRole) {
-            replicationReadTimeoutFuture.cancel(false);
+            replicationTimeoutFuture.cancel();
             //清除所有member的ReplicationState避免内存泄漏
             clearReplicationState();
+            //TODO：断开网络连接
+        } else if(sourceRole instanceof FollowerRole) {
+            replicationReadTimeoutFuture.cancel();
         } else if(sourceRole instanceof CandidateRole){
-            electionTimeoutFuture.cancel(false);
+            electionTimeoutFuture.cancel();
             //TODO：targetRole不是Leader时需要断开网络连接
         }
         currentRole = targetRole;
         //设置超时任务
         if(targetRole instanceof FollowerRole) {
             //设置心跳超时任务
-            replicationReadTimeoutFuture = scheduleExecutor.schedule(this::logReplicationReadTimeout, config.getLogReplicationResultTimeout(), TimeUnit.MILLISECONDS);
+            replicationReadTimeoutFuture = taskScheduler.scheduleLogReplicationReadTask(this::logReplicationReadTimeout);
+            //scheduleExecutor.schedule(this::logReplicationReadTimeout, config.getLogReplicationResultTimeout(), TimeUnit.MILLISECONDS);
+            //scheduleExecutor.
         } else if(targetRole instanceof  CandidateRole) {
             //重设选举超时任务
-            int maxTimeout = config.getMaxElectionTimeout(), minTimeout = config.getMinElectionTimeout();
-            int timeout = random.nextInt(maxTimeout - minTimeout) + minTimeout;
-            electionTimeoutFuture = scheduleExecutor.schedule(this::electionTimeout, timeout, TimeUnit.MILLISECONDS );
+            electionTimeoutFuture = taskScheduler.scheduleElectionTimeoutTask(this::electionTimeout);
+            //electionTimeoutFuture = scheduleExecutor.schedule(this::electionTimeout, timeout, TimeUnit.MILLISECONDS );
+
         } else if(targetRole instanceof LeaderRole){ //LeaderRole
             //定时发送心跳包任务
-            replicationTimeoutFuture = scheduleExecutor.schedule(this::logReplicationTask, config.getLogReplicationInterval(), TimeUnit.MILLISECONDS);
+            replicationTimeoutFuture = taskScheduler.scheduleLogReplicationTask(this::logReplicationTask);
+            //replicationTimeoutFuture = scheduleExecutor.schedule(this::logReplicationTask, config.getLogReplicationInterval(), TimeUnit.MILLISECONDS);
         }
         registerHandler(targetRole);
     }
     private void resetReplicationReadTimeoutTask() {
-        replicationReadTimeoutFuture.cancel(false);
-        replicationReadTimeoutFuture = scheduleExecutor.schedule(this::logReplicationReadTimeout, config.getLogReplicationResultTimeout(), TimeUnit.MILLISECONDS);
+        replicationReadTimeoutFuture.cancel();
+        replicationReadTimeoutFuture = taskScheduler.scheduleLogReplicationReadTask(this::logReplicationReadTimeout);
+        //replicationReadTimeoutFuture = scheduleExecutor.schedule(this::logReplicationReadTimeout, config.getLogReplicationResultTimeout(), TimeUnit.MILLISECONDS);
 
     }
 
@@ -142,6 +151,12 @@ public class NodeImpl implements Node {
         Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
         for (GroupMember member : allGroupMember) {
             member.setReplicationState(null);
+        }
+    }
+    private void initReplicationState() {
+        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
+        for (GroupMember member : allGroupMember) {
+            member.setReplicationState(new ReplicationState(log.getLastLogIndex(), 0));
         }
     }
 
@@ -193,7 +208,7 @@ public class NodeImpl implements Node {
 
     private void logReplicationReadTimeout() {
         logger.debug("log replication read timeout");
-        becomeToRole(new CandidateRole(currentNodeId, currentRole.getCurrentTerm()));
+        //becomeToRole(new CandidateRole(currentNodeId, currentRole.getCurrentTerm()));
         startElection();
     }
 
@@ -331,6 +346,7 @@ public class NodeImpl implements Node {
 
                 //构造空的AppendEntriesMessage
                 log.appendEmptyEntry(messageTerm);
+                initReplicationState();
 
             }
         }
@@ -375,11 +391,11 @@ public class NodeImpl implements Node {
             long leaderCommit = appendRequestMsg.getLeaderCommit();
             //long currentLogIndex = entryList.get(0).getIndex();
 
+            //重设日志读取超时任务
+            resetReplicationReadTimeoutTask();
             //Leader会定时发送AppendEntriesMessage，但是里面可能没有新的日志作为作为心跳消息
             GroupMember member = nodeGroup.getGroupMember(message.getNodeId());
             if(log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
-                //重设日志读取超时任务
-                resetReplicationReadTimeoutTask();
                 return new AppendEntriesResultMessage(currentTerm, true);
             }
             return new AppendEntriesResultMessage(currentTerm, false);
@@ -491,6 +507,8 @@ public class NodeImpl implements Node {
             try {
                 //TODO：考虑二分查找进行优化，但需要修改AppendEntriesResultMessage消息格式
                 member.getReplicationState().decNextIndex(1);
+                logger.debug("decrease nextIndex of node {}, current nextIndex is {}",
+                        member.getNodeEndpoint(), member.getReplicationState().getNextIndex());
             } catch (IndexException exception) {
                 logger.error("the nextIndex of node {} cannot be less than 0", fromId);
             }

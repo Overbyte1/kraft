@@ -60,7 +60,7 @@ public class RpcHandlerImpl implements RpcHandler {
                         pipeline.addLast(new ProtocolEncoder());
 
                         //TODO:remove it
-                        pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+                        //pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
                         pipeline.addLast(new IdentificationHandler(channelGroup));
                         pipeline.addLast(ServiceInboundHandler.getInstance());

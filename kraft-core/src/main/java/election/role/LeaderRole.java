@@ -13,4 +13,9 @@ public class LeaderRole extends AbstractRole {
     public LeaderRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
         super(nodeId, roleType, currentTerm, voteFor);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
 }

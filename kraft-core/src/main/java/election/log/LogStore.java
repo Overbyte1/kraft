@@ -24,4 +24,6 @@ public interface LogStore {
 
     boolean match(long logIndex, long preTerm, long preLogIndex);
 
+    boolean isEmpty();
+
 }

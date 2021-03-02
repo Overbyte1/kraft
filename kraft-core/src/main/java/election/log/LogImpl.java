@@ -6,12 +6,16 @@ import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.ReplicationState;
 import election.statemachine.StateMachine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rpc.message.AppendEntriesMessage;
 import rpc.message.RequestVoteMessage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class LogImpl implements Log {
+    private static final Logger logger = LoggerFactory.getLogger(LogImpl.class);
     private LogStore logStore;
     private StateMachine stateMachine;
     private long commitIndex;
@@ -60,6 +64,11 @@ public class LogImpl implements Log {
         return false;
     }
 
+    @Override
+    public long getLastLogIndex() {
+        return logStore.getLastLogIndex();
+    }
+
     /**
      * Raft 通过比较两份日志中最后一条日志条目的索引值和任期号定义谁的日志比较新：
      * 1. 如果两份日志最后的条目的任期号不同，那么任期号大的日志更加新。
@@ -84,11 +93,17 @@ public class LogImpl implements Log {
             state = new ReplicationState(0, logStore.getLastLogIndex());
             member.setReplicationState(state);
         }
+        AppendEntriesMessage message = null;
         long nextIndex = state.getNextIndex();
-        EntryMeta entryMeta = logStore.getEntryMata(nextIndex);
-        List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
-        AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
-                entryMeta.getLogIndex(), commitIndex, entryList);
+        if(logStore.isEmpty()) {
+            logger.warn("log store is empty, it have at least an empty log normally");
+            message = new AppendEntriesMessage(term, leaderId, 0, 0, commitIndex, new ArrayList<>());
+        } else {
+            EntryMeta entryMeta = logStore.getEntryMata(nextIndex);
+            List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
+            message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
+                    entryMeta.getLogIndex(), commitIndex, entryList);
+        }
         return message;
     }
 

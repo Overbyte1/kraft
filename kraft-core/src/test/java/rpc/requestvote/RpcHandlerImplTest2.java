@@ -7,7 +7,9 @@ import org.junit.Before;
 import org.junit.Test;
 import rpc.*;
 import schedule.SingleTaskScheduleExecutor;
+import schedule.SingleThreadTaskScheduler;
 import schedule.TaskScheduleExecutor;
+import schedule.TaskScheduler;
 
 public class RpcHandlerImplTest2 {
     private int port;
@@ -20,7 +22,7 @@ public class RpcHandlerImplTest2 {
         channelGroup = new ChannelGroup(new NodeId("C"));
         NodeGroup nodeGroup = initNodeGroup();
         rpcHandler = new RpcHandlerImpl(channelGroup, port);
-        TaskScheduleExecutor scheduleExecutor = new SingleTaskScheduleExecutor();
+        TaskScheduler scheduleExecutor = new SingleThreadTaskScheduler();
         GlobalConfig config = new GlobalConfig();
         node = new NodeImpl(null, nodeGroup, rpcHandler, scheduleExecutor, config);
     }

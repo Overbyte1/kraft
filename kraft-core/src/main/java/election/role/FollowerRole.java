@@ -12,4 +12,9 @@ public class FollowerRole extends AbstractRole {
     public FollowerRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
         super(nodeId, roleType, currentTerm, voteFor);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
 }

@@ -31,4 +31,19 @@ public class CandidateRole extends AbstractRole {
     public void setVoteCount(int voteCount) {
         this.voteCount = voteCount;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CandidateRole that = (CandidateRole) o;
+
+        return voteCount == that.voteCount;
+    }
+
+    @Override
+    public int hashCode() {
+        return voteCount;
+    }
 }

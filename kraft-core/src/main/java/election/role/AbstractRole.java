@@ -88,4 +88,27 @@ public abstract class AbstractRole {
         this.generalEntryList = generalEntryList;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AbstractRole role = (AbstractRole) o;
+
+        if (currentTerm != role.currentTerm) return false;
+        if (nodeId != null ? !nodeId.equals(role.nodeId) : role.nodeId != null) return false;
+        if (roleType != role.roleType) return false;
+        if (voteFor != null ? !voteFor.equals(role.voteFor) : role.voteFor != null) return false;
+        return generalEntryList != null ? generalEntryList.equals(role.generalEntryList) : role.generalEntryList == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = nodeId != null ? nodeId.hashCode() : 0;
+        result = 31 * result + (roleType != null ? roleType.hashCode() : 0);
+        result = 31 * result + (int) (currentTerm ^ (currentTerm >>> 32));
+        result = 31 * result + (voteFor != null ? voteFor.hashCode() : 0);
+        result = 31 * result + (generalEntryList != null ? generalEntryList.hashCode() : 0);
+        return result;
+    }
 }

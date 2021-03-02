@@ -118,7 +118,7 @@ public class ChannelGroup {
                         //TODO:
                         pipeline.addLast(ServiceInboundHandler.getInstance());
                         pipeline.addLast(new IdentificationHandler());
-                        pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+                        //pipeline.addLast(new LoggingHandler(LogLevel.INFO));
                     }
                 });
         try {

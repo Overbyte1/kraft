@@ -13,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.*;
 import schedule.SingleTaskScheduleExecutor;
+import schedule.SingleThreadTaskScheduler;
 import schedule.TaskScheduleExecutor;
+import schedule.TaskScheduler;
 
 public class RpcHandlerImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
@@ -32,7 +34,8 @@ public class RpcHandlerImplTest {
         channelGroup = new ChannelGroup(nodeId);
         NodeGroup nodeGroup = initNodeGroup();
         rpcHandler = new RpcHandlerImpl(channelGroup, port);
-        TaskScheduleExecutor scheduleExecutor = new SingleTaskScheduleExecutor();
+        //TaskScheduleExecutor scheduleExecutor = new SingleTaskScheduleExecutor();
+        TaskScheduler scheduleExecutor = new SingleThreadTaskScheduler();
         GlobalConfig config = new GlobalConfig();
         AbstractRole role = new FollowerRole(nodeId, 0);
         logStore = new MemoryLogStore();

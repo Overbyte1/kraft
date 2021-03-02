@@ -144,6 +144,7 @@ public class MemoryLogStore implements LogStore {
     public long getLastLogIndex() {
         return lastLogIndex;
     }
+    @Override
     public boolean isEmpty() {
         return lastLogIndex == 0;
     }
