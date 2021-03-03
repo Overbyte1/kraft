@@ -10,6 +10,7 @@ public class ElectionTimeoutFuture {
         this.future = future;
     }
     public boolean cancel() {
+        System.out.println("ElectionTimeoutFuture cancel");
         return future.cancel(false);
     }
 }

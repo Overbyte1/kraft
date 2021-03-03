@@ -25,28 +25,34 @@ public class SingleThreadTaskScheduler implements TaskScheduler {
 
     @Override
     public ElectionTimeoutFuture scheduleElectionTimeoutTask(Runnable task) {
-        logger.info("election timeout task was commit");
+        //logger.info("election timeout task was commit");
+        System.out.println("election timeout task was commit");
         int timeout = random.nextInt(maxElectionTimeout - minElectionTimeout) + minElectionTimeout;
         ScheduledFuture<?> scheduledFuture =
-                scheduledExecutorService.scheduleWithFixedDelay(task, timeout, timeout, timeUnit);
+                scheduledExecutorService.schedule(task, timeout, timeUnit);
         return new ElectionTimeoutFuture(scheduledFuture);
     }
 
     @Override
     public LogReplicationFuture scheduleLogReplicationTask(Runnable task) {
-        logger.info("log replication timeout task was commit");
+        //logger.info("log replication timeout task was commit");
+        System.out.println("log replication timeout task was commit");
         ScheduledFuture<?> scheduledFuture =
-                scheduledExecutorService.scheduleWithFixedDelay(task, 0, logReplicationInterval, timeUnit);
+                scheduledExecutorService.scheduleWithFixedDelay(task, logReplicationInterval, logReplicationInterval, timeUnit);
         return new LogReplicationFuture(scheduledFuture);
 
     }
-
-    @Override
-    public LogReplicationReadFuture scheduleLogReplicationReadTask(Runnable task) {
-        logger.info("log replication read timeout task was commit");
-        ScheduledFuture<?> schedule = scheduledExecutorService.schedule(task, logReplicationResultTimeout, timeUnit);
-        return new LogReplicationReadFuture(schedule);
-    }
+//
+//    @Override
+//    public LogReplicationReadFuture scheduleLogReplicationReadTask(Runnable task) {
+//        //logger.info("log replication read timeout task was commit");
+//        System.out.println("log replication read timeout task was commit");
+//        int timeout = random.nextInt(maxElectionTimeout - minElectionTimeout) + minElectionTimeout;
+//        ScheduledFuture<?> scheduledFuture =
+//                scheduledExecutorService.schedule(task, timeout, timeUnit);
+//        ScheduledFuture<?> schedule = scheduledExecutorService.schedule(task, timeout, timeUnit);
+//        return new LogReplicationReadFuture(schedule);
+//    }
 
     @Override
     public void stop() {

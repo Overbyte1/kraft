@@ -42,6 +42,7 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
         //logger.debug("====================ServiceHandler channelRead() was called======================");
         AbstractMessage abstractMessage = (AbstractMessage) msg;
         Object messageBody = abstractMessage.getBody();
+        logger.debug("receive message from {}, message: {}", abstractMessage.getNodeId(), abstractMessage);
         //TODO：根据消息类型选择处理器
         MessageHandler handler = handlerMap.get(messageBody.getClass());
         if (handler == null) {
@@ -52,7 +53,7 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
         //处理
         handler.handle(msg);
 
-        super.channelRead(ctx, msg);
+        //super.channelRead(ctx, msg);
     }
 
     @Override

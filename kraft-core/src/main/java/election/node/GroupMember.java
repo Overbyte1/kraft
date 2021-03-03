@@ -6,7 +6,7 @@ import rpc.NodeEndpoint;
 
 public class GroupMember {
     private static final Logger logger = LoggerFactory.getLogger(GroupMember.class);
-    private ReplicationState replicationState;
+    private volatile ReplicationState replicationState;
     private NodeEndpoint nodeEndpoint;
 
     public GroupMember(ReplicationState replicationState, NodeEndpoint nodeEndpoint) {

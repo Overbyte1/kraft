@@ -33,7 +33,7 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public Entry getLastEntry() {
+    public  Entry getLastEntry() {
         if(lastLogIndex < 1) {
             throw new LogIndexOutOfBoundsException("last log index is" + lastLogIndex + ", no any log");
         }
@@ -43,17 +43,24 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public EntryMeta getEntryMata(long logIndex) {
-        if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
-            throw new LogIndexOutOfBoundsException("index: " + logIndex + ", last log index: " + lastLogIndex
-                    + ", and argument must > 0");
+    public  EntryMeta getEntryMata(long logIndex) {
+        if(logIndex == 0) {
+            return new EntryMeta(0, 0);
         }
         Entry lastEntry = getLastEntry();
         return new EntryMeta(lastEntry.getIndex(), lastEntry.getTerm());
     }
 
     @Override
-    public List<Entry> getLogEntriesFrom(long logIndex) {
+    public EntryMeta getPreEntryMeta(long logIndex) {
+        if(logIndex == 1 && lastLogIndex > 0) {
+            return new EntryMeta(0, 0);
+        }
+        return getEntryMata(logIndex - 1);
+    }
+
+    @Override
+    public  List<Entry> getLogEntriesFrom(long logIndex) {
         if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
             throw new LogIndexOutOfBoundsException("index: " + logIndex + ", last log index: " + lastLogIndex
                     + ", and argument must > 0");
@@ -76,7 +83,7 @@ public class MemoryLogStore implements LogStore {
      * @return
      */
     @Override
-    public synchronized boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs) {
+    public  boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs) {
         //心跳日志
         if(logs == null || logs.size() == 0) {
             return true;
@@ -106,7 +113,8 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public synchronized boolean appendEntry(Entry entry) {
+    public  boolean appendEntry(Entry entry) {
+        logger.debug("entry {} was append", entry);
         lastLogIndex++;
         entry.setIndex(lastLogIndex);
         entryList.add(entry);
@@ -114,7 +122,7 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public synchronized boolean deleteLogEntriesFrom(long logIndex) {
+    public  boolean deleteLogEntriesFrom(long logIndex) {
         if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
             throw new LogIndexOutOfBoundsException("index: " + logIndex + ", last log index: " + lastLogIndex
                     + ", and argument must > 0");
@@ -128,7 +136,7 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public boolean match(long logIndex, long preTerm, long preLogIndex) {
+    public  boolean match(long logIndex, long preTerm, long preLogIndex) {
         if(logIndex == 1 && preTerm == 0 && lastLogIndex == 0 && preLogIndex == 0) {
             return true;
         }
@@ -141,22 +149,22 @@ public class MemoryLogStore implements LogStore {
     }
 
     @Override
-    public long getLastLogIndex() {
+    public  long getLastLogIndex() {
         return lastLogIndex;
     }
     @Override
-    public boolean isEmpty() {
+    public  boolean isEmpty() {
         return lastLogIndex == 0;
     }
-    public int size() {
+    public  int size() {
         return entryList.size();
     }
 
-    private int toListIndex(long logIndex) {
+    private  int toListIndex(long logIndex) {
         return (int) (logIndex - offset - 1);
     }
 
-    private long toLogIndex(int listIndex) {
+    private  long toLogIndex(int listIndex) {
         return listIndex + offset + 1;
     }
 

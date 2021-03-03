@@ -4,8 +4,8 @@ public class GlobalConfig {
     //单位是毫秒
     private int minElectionTimeout = 6000;
     private int maxElectionTimeout = 10000;
-    private int logReplicationInterval = 3000;
-    private int logReplicationResultTimeout = 1500;
+    private int logReplicationInterval = 1000;
+    private int logReplicationResultTimeout = 4000;
     private int connectTimeout = 800;
 
     public int getConnectTimeout() {

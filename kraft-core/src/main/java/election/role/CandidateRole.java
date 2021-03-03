@@ -7,11 +7,9 @@ public class CandidateRole extends AbstractRole {
     //TODO:考虑AtomicInteger，对比LongAdder进行选择
     private int voteCount = 1;
     //TODO：总票数如何统计？需要考虑节点的动态变更
-    public CandidateRole(long currentTerm) {
-        super(currentTerm);
-    }
+
     public CandidateRole(NodeId nodeId, long currentTerm) {
-        this(nodeId, currentTerm, null);
+        this(nodeId, currentTerm, nodeId);
     }
     public CandidateRole(NodeId nodeId, long currentTerm, NodeId voteFor) {
         this(nodeId, RoleType.CANDIDATE, currentTerm, voteFor);

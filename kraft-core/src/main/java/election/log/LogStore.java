@@ -14,6 +14,8 @@ public interface LogStore {
 
     EntryMeta getEntryMata(long logIndex);
 
+    EntryMeta getPreEntryMeta(long logIndex);
+
     List<Entry> getLogEntriesFrom(long logIndex);
 
     boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs);

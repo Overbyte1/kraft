@@ -3,10 +3,10 @@ package election.node;
 import election.exception.IndexException;
 
 public class ReplicationState {
-    private long nextIndex;
-    private long matchIndex;
-    private boolean replicating;
-    private long lastReplicationTime;
+    private volatile long nextIndex;
+    private volatile long matchIndex;
+    private volatile boolean replicating;
+    private volatile long lastReplicationTime;
 
     public ReplicationState(long nextIndex, long matchIndex) {
         this(nextIndex, matchIndex, true, 0);

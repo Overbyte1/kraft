@@ -42,7 +42,7 @@ public class LogImpl implements Log {
      */
     @Override
     public boolean advanceCommitForLeader(long currentTerm, long n) {
-        EntryMeta entryMata = logStore.getEntryMata(commitIndex);
+        EntryMeta entryMata = logStore.getEntryMata(commitIndex + 1);
         //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
         if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
             long idx = commitIndex;
@@ -99,7 +99,7 @@ public class LogImpl implements Log {
             logger.warn("log store is empty, it have at least an empty log normally");
             message = new AppendEntriesMessage(term, leaderId, 0, 0, commitIndex, new ArrayList<>());
         } else {
-            EntryMeta entryMeta = logStore.getEntryMata(nextIndex);
+            EntryMeta entryMeta = logStore.getPreEntryMeta(nextIndex);
             List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
             message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
                     entryMeta.getLogIndex(), commitIndex, entryList);

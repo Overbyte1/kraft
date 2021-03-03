@@ -5,7 +5,7 @@ public interface TaskScheduler {
 
     LogReplicationFuture scheduleLogReplicationTask(Runnable task);
 
-    LogReplicationReadFuture scheduleLogReplicationReadTask(Runnable task);
+    //LogReplicationReadFuture scheduleLogReplicationReadTask(Runnable task);
 
     void stop();
 }

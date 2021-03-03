@@ -9,6 +9,7 @@ public class LogReplicationReadFuture {
         this.future = future;
     }
     public boolean cancel() {
+        System.out.println("LogReplicationReadFuture cancel");
         return future.cancel(false);
     }
 }

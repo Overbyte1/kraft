@@ -60,7 +60,8 @@ public class ChannelGroup {
         NodeId nodeId = nodeEndpoint.getNodeId();
         if(isConnect(nodeId)) {
             NioChannel channel = getChannel(nodeId);
-            channel.writeMessage(message);
+            //channel.writeMessage(message);
+            writeMessage(nodeId, message);
             return;
         }
         Endpoint endpoint = nodeEndpoint.getEndpoint();
@@ -86,6 +87,7 @@ public class ChannelGroup {
         NioChannel channel = channelMap.get(nodeId);
         if(isConnect(nodeId)) {
             channel.writeMessage(abstractMessage);
+            logger.debug("send {}", abstractMessage);
         } else {
             removeChannel(nodeId);
             logger.warn("failed to write message, because the connection of node {} was closed", nodeId);
@@ -162,6 +164,7 @@ public class ChannelGroup {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logger.warn("exception Caught: {}" + cause.getMessage());
+            cause.printStackTrace();
             ctx.close();
             //TODO:从map中移除channel
 //            super.exceptionCaught(ctx, cause);
