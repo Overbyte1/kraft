@@ -16,10 +16,6 @@ import rpc.message.*;
 import schedule.*;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class NodeImpl implements Node {
     private static final Logger logger = LoggerFactory.getLogger(NodeImpl.class);
@@ -120,6 +116,7 @@ public class NodeImpl implements Node {
             //TODO：断开网络连接
         } else if(sourceRole instanceof FollowerRole) {
             electionTimeoutFuture.cancel();
+            electionTimeoutFuture = null;
         } else if(sourceRole instanceof CandidateRole){
             electionTimeoutFuture.cancel();
             electionTimeoutFuture = null;
@@ -177,7 +174,7 @@ public class NodeImpl implements Node {
                         //TODO：配置 以及 考虑隐藏 ReplicationState
                         if(member.shouldReplication(config.getLogReplicationInterval())) {
                             AppendEntriesMessage message = log.createAppendEntriesMessage(currentNodeId,
-                                    currentRole.getCurrentTerm(), member);
+                                    currentRole.getCurrentTerm(), member.getReplicationState().getNextIndex());
                             //更新日志发送时间
                             member.updateReplicationTime();
                             rpcHandler.sendAppendEntriesMessage(message, member.getNodeEndpoint());
@@ -292,7 +289,7 @@ public class NodeImpl implements Node {
                 ReplicationState state = nodeGroup.getGroupMember(message.getNodeId()).getReplicationState();
 
                 if (log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
-                    return new AppendEntriesResultMessage(term, true);
+                    return new AppendEntriesResultMessage(term, true, entryList.size());
                 }
             }
             logger.info("receive unexpect AppendEntriesResultMessage, currentTerm is {}, receive term is {}",
@@ -414,7 +411,7 @@ public class NodeImpl implements Node {
             //Leader会定时发送AppendEntriesMessage，但是里面可能没有新的日志作为作为心跳消息
             GroupMember member = nodeGroup.getGroupMember(message.getNodeId());
             if(log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
-                return new AppendEntriesResultMessage(currentTerm, true);
+                return new AppendEntriesResultMessage(currentTerm, true, entryList.size());
             }
             return new AppendEntriesResultMessage(currentTerm, false);
         }
@@ -484,12 +481,10 @@ public class NodeImpl implements Node {
                 long preTerm = appendRequestMsg.getPreLogTerm();
                 long preLogIndex = appendRequestMsg.getPreLogIndex();
                 long leaderCommit = appendRequestMsg.getLeaderCommit();
-                boolean success = false;
 
                 if(log.appendGeneralEntriesFromLeader(preTerm, preLogIndex, entryList, leaderCommit)) {
-                    success = true;
+                    return new AppendEntriesResultMessage(term, true, entryList.size());
                 }
-                return new AppendEntriesResultMessage(term, success);
             }
             return new AppendEntriesResultMessage(currentTerm, false);
         }
@@ -534,8 +529,9 @@ public class NodeImpl implements Node {
 
             if(success) {
                 ReplicationState replicationState = nodeGroup.getGroupMember(fromId).getReplicationState();
-                log.advanceCommitForLeader(currentRole.getCurrentTerm(), entriesResultMessage.getLogNum());
-                log.updateReplicationState(replicationState);
+                //增加nextIndex和matchIndex
+                log.updateReplicationState(replicationState, entriesResultMessage.getLogNum());
+                log.advanceCommitForLeader(currentRole.getCurrentTerm());
                 return;
             }
             //fail
@@ -557,7 +553,7 @@ public class NodeImpl implements Node {
                 logger.debug("decrease nextIndex of node {}, current nextIndex is {}",
                         member.getNodeEndpoint(), member.getReplicationState().getNextIndex());
             } catch (IndexException exception) {
-                logger.error("the nextIndex of node {} cannot be less than 0", fromId);
+                logger.error("the nextIndex of node {} must be greater than 0", fromId);
             }
             //完成Leader的日志复制以及心跳消息。定时任务，通过记录每次的发送时间来判断是否要发送log消息
         }

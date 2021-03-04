@@ -8,16 +8,23 @@ public class AppendEntriesResultMessage implements Serializable {
     //持久化的日志条数
     private int logNum;
 
+    /**
+     * 附加日志失败时使用该构造方法
+     * @param term
+     * @param success
+     */
     public AppendEntriesResultMessage(long term, boolean success) {
         this.term = term;
         this.success = success;
-        if(success) {
-            logNum = 1;
-        } else {
-            logNum = 0;
-        }
+        logNum = 0;
     }
 
+    /**
+     * 附加日志成功时使用该构造方法
+     * @param term
+     * @param success
+     * @param logNum
+     */
     public AppendEntriesResultMessage(long term, boolean success, int logNum) {
         this.term = term;
         this.success = success;

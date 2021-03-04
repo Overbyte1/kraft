@@ -2,7 +2,6 @@ package election.log;
 
 import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
-import election.node.GroupMember;
 import election.node.NodeId;
 import election.node.ReplicationState;
 import election.statemachine.StateMachine;
@@ -14,12 +13,11 @@ import java.util.List;
 public interface Log {
     /**
      * 增加 commitIndex
-     * @param n 增加的值，n > 0
      * @return 成功返回 true，否则返回 false
      */
-    boolean advanceCommitForLeader(long currentTerm, long n);
+    boolean advanceCommitForLeader(long currentTerm);
 
-    boolean updateReplicationState(ReplicationState state);
+    boolean updateReplicationState(ReplicationState state, long addNum);
 
     long getLastLogIndex();
 
@@ -36,10 +34,10 @@ public interface Log {
      * 创建常规的附加日志消息
      * @param leaderId
      * @param term
-     * @param member
+     * @param nextIndex
      * @return
      */
-    AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, GroupMember member);
+    AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, long nextIndex);
 
     /**
      * 创建请求投票消息

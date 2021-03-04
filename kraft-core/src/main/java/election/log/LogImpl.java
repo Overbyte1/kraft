@@ -1,7 +1,6 @@
 package election.log;
 
 import election.log.entry.*;
-import election.node.GroupMember;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.ReplicationState;
@@ -37,16 +36,19 @@ public class LogImpl implements Log {
      * 并且 log[N].term == currentTerm 成立，那么令 commitIndex 等于这个 N
      *
      * @param currentTerm
-     * @param n 增加的值，n > 0
      * @return
      */
     @Override
-    public boolean advanceCommitForLeader(long currentTerm, long n) {
+    public boolean advanceCommitForLeader(long currentTerm) {
+        if(commitIndex == logStore.getLastLogIndex()) {
+            return false;
+        }
         EntryMeta entryMata = logStore.getEntryMata(commitIndex + 1);
         //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
         if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
-            long idx = commitIndex;
+            long oldCommitIndex = commitIndex;
             commitIndex++;
+            logger.debug("advance commit index to {} from {}", commitIndex, oldCommitIndex);
             //apply(logStore.getLogEntry(idx));
             return true;
         }
@@ -54,13 +56,10 @@ public class LogImpl implements Log {
     }
 
     @Override
-    public boolean updateReplicationState(ReplicationState replicationState) {
+    public boolean updateReplicationState(ReplicationState replicationState, long addNum) {
         //TODO:需要确定replicationState matchIndex与nextIndex增加的幅度
-        replicationState.incMatchIndex();
-        long lastLogIndex = logStore.getLastLogIndex();
-        if(lastLogIndex > replicationState.getNextIndex()) {
-            replicationState.incNextIndex();
-        }
+        replicationState.incNextIndex(addNum);
+        replicationState.setMatchIndex(replicationState.getNextIndex() - 1);
         return false;
     }
 
@@ -79,7 +78,10 @@ public class LogImpl implements Log {
      */
     @Override
     public boolean isNewerThan(long lastTerm, long lastLogIndex) {
-        EntryMeta entryMata = logStore.getEntryMata(lastLogIndex);
+        if(logStore.isEmpty()) {
+            return false;
+        }
+        EntryMeta entryMata = logStore.getEntryMata(logStore.getLastLogIndex());
         if(entryMata.getTerm() != lastTerm) {
             return lastTerm > entryMata.getTerm();
         }
@@ -87,29 +89,25 @@ public class LogImpl implements Log {
     }
 
     @Override
-    public AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, GroupMember member) {
-        ReplicationState state = member.getReplicationState();
-        if(state == null) {
-            state = new ReplicationState(0, logStore.getLastLogIndex());
-            member.setReplicationState(state);
-        }
+    public AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, long nextIndex) {
+        //
         AppendEntriesMessage message = null;
-        long nextIndex = state.getNextIndex();
+        //nextIndex初始值为1，在日志已经全部复制到Follower的情况下比lastLogIndex大1
+
         if(logStore.isEmpty()) {
             logger.warn("log store is empty, it have at least an empty log normally");
             message = new AppendEntriesMessage(term, leaderId, 0, 0, commitIndex, new ArrayList<>());
         } else {
-            EntryMeta entryMeta = logStore.getPreEntryMeta(nextIndex);
+            EntryMeta preEntryMeta = logStore.getPreEntryMeta(nextIndex);
             List<Entry> entryList = logStore.getLogEntriesFrom(nextIndex);
-            message = new AppendEntriesMessage(term, leaderId, entryMeta.getTerm(),
-                    entryMeta.getLogIndex(), commitIndex, entryList);
+            message = new AppendEntriesMessage(term, leaderId, preEntryMeta.getTerm(),
+                    preEntryMeta.getLogIndex(), commitIndex, entryList);
         }
         return message;
     }
 
     @Override
     public RequestVoteMessage createRequestVoteMessage(NodeId candidateId, long term) {
-        //TODO:需要保证原子性？
         long lastLogIndex = logStore.getLastLogIndex();
         long lastLogTerm = 0;
         if(lastLogIndex > 0) {
@@ -122,7 +120,6 @@ public class LogImpl implements Log {
 
     @Override
     public EmptyEntry appendEmptyEntry(long term) {
-        //TODO:保证线程安全，有必要在Entry中维护index？
         EmptyEntry entry = new EmptyEntry(term, logStore.getLastLogIndex());
         logStore.appendEntry(entry);
         return entry;

@@ -47,8 +47,8 @@ public class MemoryLogStore implements LogStore {
         if(logIndex == 0) {
             return new EntryMeta(0, 0);
         }
-        Entry lastEntry = getLastEntry();
-        return new EntryMeta(lastEntry.getIndex(), lastEntry.getTerm());
+        Entry entry = getLogEntry(logIndex);
+        return new EntryMeta(entry.getIndex(), entry.getTerm());
     }
 
     @Override
@@ -61,9 +61,8 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public  List<Entry> getLogEntriesFrom(long logIndex) {
-        if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
-            throw new LogIndexOutOfBoundsException("index: " + logIndex + ", last log index: " + lastLogIndex
-                    + ", and argument must > 0");
+        if(logIndex > lastLogIndex) {
+            return new ArrayList<>();
         }
         int fromIndex = toListIndex(logIndex);
         int endIndex = entryList.size();
@@ -86,47 +85,49 @@ public class MemoryLogStore implements LogStore {
     public  boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs) {
         //心跳日志
         if(logs == null || logs.size() == 0) {
-            return true;
+            EntryMeta entryMata = getEntryMata(lastLogIndex);
+            return entryMata.getTerm() == preTerm && entryMata.getLogIndex() == preLogIndex;
         }
-        long index = logs.get(0).getIndex();
-        //判断index位置处的preTerm与preLogIndex是否匹配
-        if(match(index, preTerm, preLogIndex)) {
-            for (Entry entry : logs) {
-                //index应单调递增，间隔1
-                if(entry.getIndex() == preLogIndex + 1) {
-                    entryList.add(entry);
-                    preLogIndex = entry.getIndex();
-                } else {
-                    logger.warn("log index is not match, logs: {}", logs);
-                    for(int i = entryList.size() - 1; i > lastLogIndex; i--) {
-                        entryList.remove(i);
+        try {
+            //判断index位置处的preTerm与preLogIndex是否匹配
+            long index = logs.get(0).getIndex();
+            if(match(index, preTerm, preLogIndex)) {
+                deleteLogEntriesFrom(index);
+                for (Entry entry : logs) {
+                    //index应单调递增，间隔1
+                    if(entry.getIndex() == preLogIndex + 1) {
+                        entryList.add(entry);
+                        preLogIndex = entry.getIndex();
+                    } else {
+                        logger.warn("log index is not match, logs: {}", logs);
+                        for(int i = entryList.size() - 1; i > lastLogIndex; i--) {
+                            entryList.remove(i);
+                        }
+                        return false;
                     }
-                    return false;
                 }
+                //boolean res = entryList.addAll(logs);
+                lastLogIndex += logs.size();
+                logger.debug("succeed appending {} entries to log, current log: {}", logs.size(), entryList);
+                return true;
             }
-            //boolean res = entryList.addAll(logs);
-            lastLogIndex += logs.size();
-
-            return true;
+        } catch (Exception exception) {
+            logger.debug("fail to append entries {}", logs);
         }
         return false;
     }
 
     @Override
     public  boolean appendEntry(Entry entry) {
-        logger.debug("entry {} was append", entry);
         lastLogIndex++;
         entry.setIndex(lastLogIndex);
+        logger.debug("entry {} was append", entry);
         entryList.add(entry);
         return true;
     }
 
     @Override
     public  boolean deleteLogEntriesFrom(long logIndex) {
-        if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
-            throw new LogIndexOutOfBoundsException("index: " + logIndex + ", last log index: " + lastLogIndex
-                    + ", and argument must > 0");
-        }
         int fromIndex = toListIndex(logIndex);
         for(int i = entryList.size() - 1; i >= fromIndex; i--) {
             entryList.remove(i);
@@ -137,8 +138,11 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public  boolean match(long logIndex, long preTerm, long preLogIndex) {
-        if(logIndex == 1 && preTerm == 0 && lastLogIndex == 0 && preLogIndex == 0) {
-            return true;
+//        if(logIndex == 1 && preTerm == 0 && lastLogIndex == 0 && preLogIndex == 0) {
+//            return true;
+//        }
+        if(preLogIndex < 0) {
+            return false;
         }
         try {
             EntryMeta entryMata = getEntryMata(logIndex - 1);

@@ -38,4 +38,13 @@ public abstract class Entry implements Serializable {
     public void setIndex(long index) {
         this.index = index;
     }
+
+    @Override
+    public String toString() {
+        return "Entry{" +
+                "type=" + type +
+                ", term=" + term +
+                ", index=" + index +
+                '}';
+    }
 }

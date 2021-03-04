@@ -24,7 +24,9 @@ import schedule.SingleThreadTaskScheduler;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -105,13 +107,10 @@ public class NodeImplTest {
     }
     @Test
     public void testU() throws InterruptedException {
-        ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
-        ScheduledFuture<?> future = scheduledThreadPoolExecutor.scheduleWithFixedDelay(() -> {
-            System.out.println("hello");
-        }, 0, 1000, TimeUnit.MILLISECONDS);
-
-        Thread.sleep(3000);
-        future.cancel(false);
-        waiting();
+        List<Integer> list = new ArrayList<>();
+        list.sort(this::fun);;
+    }
+    private int fun(int a, int b) {
+        return 0;
     }
 }

@@ -50,6 +50,7 @@ public class ReplicationState {
     }
 
     public void setMatchIndex(long matchIndex) {
+        assert matchIndex >= this.matchIndex;
         this.matchIndex = matchIndex;
     }
     public void incNextIndex(long n) {
