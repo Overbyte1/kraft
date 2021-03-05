@@ -19,7 +19,7 @@ public class MemoryLogStore implements LogStore {
     private int offset;
 
     public MemoryLogStore() {
-        entryList = Collections.synchronizedList(new ArrayList<>());
+        entryList = new ArrayList<>();
         lastLogIndex = 0;
         offset = 0;
     }
@@ -44,8 +44,8 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public  EntryMeta getEntryMata(long logIndex) {
-        if(logIndex == 0) {
-            return new EntryMeta(0, 0);
+        if(lastLogIndex < 1 || logIndex > lastLogIndex || logIndex < 1) {
+            throw new LogIndexOutOfBoundsException("" + logIndex);
         }
         Entry entry = getLogEntry(logIndex);
         return new EntryMeta(entry.getIndex(), entry.getTerm());
@@ -53,7 +53,8 @@ public class MemoryLogStore implements LogStore {
 
     @Override
     public EntryMeta getPreEntryMeta(long logIndex) {
-        if(logIndex == 1 && lastLogIndex > 0) {
+        //索引为0的 term=0, logIndex=0，但只能在进行匹配时使用
+        if(logIndex == 1) {
             return new EntryMeta(0, 0);
         }
         return getEntryMata(logIndex - 1);
@@ -83,12 +84,14 @@ public class MemoryLogStore implements LogStore {
      */
     @Override
     public  boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs) {
-        //心跳日志
-        if(logs == null || logs.size() == 0) {
-            EntryMeta entryMata = getEntryMata(lastLogIndex);
-            return entryMata.getTerm() == preTerm && entryMata.getLogIndex() == preLogIndex;
-        }
         try {
+            //心跳日志
+            if(logs == null || logs.size() == 0) {
+                if(isEmpty()) return false;
+
+                EntryMeta entryMata = getEntryMata(lastLogIndex);
+                return entryMata.getTerm() == preTerm && entryMata.getLogIndex() == preLogIndex;
+            }
             //判断index位置处的preTerm与preLogIndex是否匹配
             long index = logs.get(0).getIndex();
             if(match(index, preTerm, preLogIndex)) {
@@ -112,7 +115,7 @@ public class MemoryLogStore implements LogStore {
                 return true;
             }
         } catch (Exception exception) {
-            logger.debug("fail to append entries {}", logs);
+            logger.debug("fail to append entries {}, cause is: ", logs, exception.getMessage());
         }
         return false;
     }
@@ -145,7 +148,7 @@ public class MemoryLogStore implements LogStore {
             return false;
         }
         try {
-            EntryMeta entryMata = getEntryMata(logIndex - 1);
+            EntryMeta entryMata = getPreEntryMeta(logIndex);
             return entryMata.getLogIndex() == preLogIndex && entryMata.getTerm() == preTerm;
         } catch (Exception e) {
             return false;

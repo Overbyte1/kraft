@@ -60,6 +60,7 @@ public class LogImpl implements Log {
         //TODO:需要确定replicationState matchIndex与nextIndex增加的幅度
         replicationState.incNextIndex(addNum);
         replicationState.setMatchIndex(replicationState.getNextIndex() - 1);
+
         return false;
     }
 
@@ -144,11 +145,16 @@ public class LogImpl implements Log {
         boolean result = logStore.appendEntries(preTerm, preLogIndex, entryList);
         if(result) {
             //更新commitIndex、appliedIndex
+            long oldCommitIndex = commitIndex;
             commitIndex = Math.min(leaderCommit, logStore.getLastLogIndex());
+            if(oldCommitIndex != commitIndex) {
+                logger.debug("advance commit index to {} from {}", commitIndex, oldCommitIndex);
+            }
             if(appliedIndex < commitIndex) {
                 //TODO：异步执行命令
                 for (Entry entry : entryList) {
-                    apply(((GeneralEntry)entry).getCommandBytes());
+                    if(entry instanceof GeneralEntry)
+                        apply(((GeneralEntry)entry).getCommandBytes());
                 }
             }
         }

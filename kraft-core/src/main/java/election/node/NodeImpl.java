@@ -532,6 +532,8 @@ public class NodeImpl implements Node {
                 //增加nextIndex和matchIndex
                 log.updateReplicationState(replicationState, entriesResultMessage.getLogNum());
                 log.advanceCommitForLeader(currentRole.getCurrentTerm());
+                logger.debug("node {} 's nextIndex is {}, matchIndex is {}", nodeGroup.getGroupMember(fromId),
+                        replicationState.getNextIndex(), replicationState.getMatchIndex());
                 return;
             }
             //fail
