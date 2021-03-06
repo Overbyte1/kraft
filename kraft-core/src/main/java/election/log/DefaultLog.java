@@ -4,6 +4,7 @@ import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
 import election.log.entry.EntryType;
+import election.log.store.LogStore;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.statemachine.StateMachine;
@@ -84,7 +85,7 @@ public class DefaultLog {
     public EmptyEntry appendEmptyEntry(long term) {
         //这是成为Leader后添加的第一条日志，其他上层应用的日志必须等待该条日志添加完毕才能添加，所以是线程安全的
         EmptyEntry entry = new EmptyEntry(EntryType.Empty, term);
-        logStore.appendEntry(entry);
+        logStore.appendEmptyEntry(entry);
         return entry;
     }
     public void decNextIndex(NodeId nodeId) {

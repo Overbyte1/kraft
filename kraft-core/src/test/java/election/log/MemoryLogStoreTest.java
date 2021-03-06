@@ -4,6 +4,7 @@ import election.LogIndexOutOfBoundsException;
 import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
+import election.log.store.MemoryLogStore;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public class MemoryLogStoreTest extends TestCase {
         assertEquals(true, log.isEmpty());
 
         Entry entry = new EmptyEntry(0, 1);
-        log.appendEntry(entry);
+        log.appendEmptyEntry(entry);
 
         assertEquals(1, log.size());
 
@@ -35,7 +36,7 @@ public class MemoryLogStoreTest extends TestCase {
         try {
             log.getLastEntry();
         } catch (LogIndexOutOfBoundsException e) {
-            log.appendEntry(entry);
+            log.appendEmptyEntry(entry);
             assertEquals(entry, log.getLastEntry());
             return;
         }
@@ -48,8 +49,8 @@ public class MemoryLogStoreTest extends TestCase {
         try {
             log.getEntryMata(0);
         } catch (LogIndexOutOfBoundsException e) {
-            log.appendEntry(entry);
-            log.appendEntry(entry1);
+            log.appendEmptyEntry(entry);
+            log.appendEmptyEntry(entry1);
             EntryMeta entryMeta = log.getEntryMata(log.getLastLogIndex());
             assertEquals(entry1.getIndex(), entryMeta.getLogIndex());
             assertEquals(entry1.getTerm(), entryMeta.getTerm());
@@ -66,8 +67,8 @@ public class MemoryLogStoreTest extends TestCase {
         try {
             log.getLogEntriesFrom(0);
         } catch (LogIndexOutOfBoundsException e) {
-            log.appendEntry(entry);
-            log.appendEntry(entry1);
+            log.appendEmptyEntry(entry);
+            log.appendEmptyEntry(entry1);
             List<Entry> entries = log.getLogEntriesFrom(1);
             for (Entry entry2 : entries) {
                 assertEquals(entry2, log.getLogEntry(entry2.getIndex()));
@@ -125,7 +126,7 @@ public class MemoryLogStoreTest extends TestCase {
         log.appendEntries(0, 0, list);
         assertEquals(entries.length, log.getLastLogIndex());
 
-        log.appendEntry(new EmptyEntry(0, 0));
+        log.appendEmptyEntry(new EmptyEntry(0, 0));
         assertEquals(11, log.getLastLogIndex());
     }
 

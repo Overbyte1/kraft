@@ -3,8 +3,8 @@ package election.nodeimpl;
 import election.config.GlobalConfig;
 import election.log.Log;
 import election.log.LogImpl;
-import election.log.LogStore;
-import election.log.MemoryLogStore;
+import election.log.store.LogStore;
+import election.log.store.MemoryLogStore;
 import election.node.GroupMember;
 import election.node.NodeGroup;
 import election.node.NodeId;
@@ -19,7 +19,6 @@ import rpc.Endpoint;
 import rpc.NodeEndpoint;
 import rpc.RpcHandlerImpl;
 import rpc.requestvote.RpcHandlerImplTest;
-import schedule.SingleTaskScheduleExecutor;
 import schedule.SingleThreadTaskScheduler;
 
 import java.io.IOException;

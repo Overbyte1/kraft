@@ -9,7 +9,7 @@ import rpc.message.*;
 import schedule.SingleThreadTaskExecutor;
 import schedule.TaskExecutor;
 
-public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
+public abstract class AbstractMessageHandler implements RequestHandler, ResponseHandler {
     private final Logger logger;
     private final NodeGroup nodeGroup;
     private final RpcHandler rpcHandler;
@@ -68,23 +68,4 @@ public class AbstractMessageHandler implements RequestHandler, ResponseHandler {
         }
     }
 
-    @Override
-    public AppendEntriesResultMessage handleAppendEntriesRequest(AbstractMessage<AppendEntriesMessage> message) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public RequestVoteResultMessage handleRequestVoteRequest(AbstractMessage<RequestVoteMessage> message) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void handleRequestVoteResult(AbstractMessage<RequestVoteResultMessage> message) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void handleAppendEntriesResult(AbstractMessage<AppendEntriesResultMessage> message) {
-        throw new UnsupportedOperationException();
-    }
 }

@@ -80,7 +80,6 @@ public class NodeImpl implements Node {
             4.3 选举超时，term + 1，发起新一轮选举
          */
         logger.info("current node is starting......");
-        //TODO:change
         becomeToRole(new FollowerRole(currentNodeId, 0));
 //        registerHandler(currentRole);
 //        startElection();

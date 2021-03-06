@@ -1,6 +1,7 @@
 package election.log;
 
 import election.log.entry.*;
+import election.log.store.LogStore;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.ReplicationState;
@@ -122,7 +123,7 @@ public class LogImpl implements Log {
     @Override
     public EmptyEntry appendEmptyEntry(long term) {
         EmptyEntry entry = new EmptyEntry(term, logStore.getLastLogIndex());
-        logStore.appendEntry(entry);
+        logStore.appendEmptyEntry(entry);
         return entry;
     }
 
@@ -135,7 +136,7 @@ public class LogImpl implements Log {
     @Override
     public boolean appendGeneralEntry(long term, byte[] command) {
         GeneralEntry entry = new GeneralEntry(term, command);
-        logStore.appendEntry(entry);
+        logStore.appendEmptyEntry(entry);
         return true;
     }
 

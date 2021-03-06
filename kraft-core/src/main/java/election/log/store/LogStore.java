@@ -1,4 +1,4 @@
-package election.log;
+package election.log.store;
 
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
@@ -20,7 +20,15 @@ public interface LogStore {
 
     boolean appendEntries(long preTerm, long preLogIndex, List<Entry> logs);
 
-    boolean appendEntry(Entry entry);
+    /**
+     * 附加空日志
+     * @param entry
+     * @return
+     */
+    boolean appendEmptyEntry(Entry entry);
+
+
+    boolean appendEntry(Entry entry, long preTerm, long preLogIndex);
 
     boolean deleteLogEntriesFrom(long logIndex);
 
