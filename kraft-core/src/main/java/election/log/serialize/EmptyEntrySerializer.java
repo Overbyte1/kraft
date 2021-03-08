@@ -1,10 +1,9 @@
-package election.log.entry;
+package election.log.serialize;
 
-public class EmptyEntry extends Entry  {
-    public EmptyEntry(long term, long index) {
-        super(EntryType.Empty, term, index);
-    }
+import election.log.entry.Entry;
+import election.log.entry.SerializableEntry;
 
+public class EmptyEntrySerializer implements SerializableEntry {
     @Override
     public byte[] entryToBytes(Entry entry) {
         return new byte[0];

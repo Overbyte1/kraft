@@ -2,7 +2,7 @@ package election.log.entry;
 
 import java.io.Serializable;
 
-public abstract class Entry implements Serializable {
+public abstract class Entry implements Serializable{
     private int type;
     private long term;
     private long index;
@@ -38,6 +38,7 @@ public abstract class Entry implements Serializable {
     public void setIndex(long index) {
         this.index = index;
     }
+
 
     @Override
     public String toString() {
