@@ -1,7 +1,9 @@
 package rpc.requestvote;
 
 import election.config.GlobalConfig;
-import election.log.*;
+import election.log.DefaultLog;
+import election.log.Log;
+import election.log.LogImpl;
 import election.log.store.LogStore;
 import election.log.store.MemoryLogStore;
 import election.node.*;
@@ -13,10 +15,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rpc.*;
-import schedule.SingleTaskScheduleExecutor;
+import rpc.ChannelGroup;
+import rpc.Endpoint;
+import rpc.NodeEndpoint;
+import rpc.RpcHandlerImpl;
 import schedule.SingleThreadTaskScheduler;
-import schedule.TaskScheduleExecutor;
 import schedule.TaskScheduler;
 
 public class RpcHandlerImplTest {

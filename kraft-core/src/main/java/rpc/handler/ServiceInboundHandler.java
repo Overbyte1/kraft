@@ -1,7 +1,6 @@
 package rpc.handler;
 
 import election.handler.MessageHandler;
-import election.node.NodeId;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

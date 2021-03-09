@@ -1,9 +1,9 @@
 package election.log.store;
 
 import election.log.serialize.EntryIndexSerializer;
+import election.log.serialize.EntryIndexSerializerImpl;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
@@ -14,21 +14,24 @@ public class EntryIndexFile {
     private RandomAccessFile randomAccessFile;
     private EntryIndexFileMeta entryIndexFileMeta;
     private static final String openMode = "rw";
+    //记录每个EntryIndexItem的长度，单位为字节
+    private static final int ITEM_LENGTH_BYTE = 4;
     //private static final int indexByteLen = 8;
 
-    private EntryIndexSerializer entryIndexSerializer;
+    private final EntryIndexSerializer entryIndexSerializer = new EntryIndexSerializerImpl();
     //private long startEntryIndex;
 
     private EntryIndexItem lastEntryIndexItem;
 
     public EntryIndexFile(File file, long startEntryIndex, long termOffset) throws IOException {
         init(file, startEntryIndex, termOffset);
+
     }
     public EntryIndexFile(File file) throws IOException {
         randomAccessFile = new RandomAccessFile(file, openMode);
         long fileLen = randomAccessFile.length();
 
-        assert (fileLen - EntryIndexFileMeta.LEN)  % EntryIndexItem.BYTE_LEN == 0;
+        assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
 
         lastEntryIndexItem = getEntryIndexItem((fileLen - EntryIndexFileMeta.LEN) / EntryIndexItem.BYTE_LEN);
     }
@@ -41,28 +44,36 @@ public class EntryIndexFile {
         }
         randomAccessFile = new RandomAccessFile(file, openMode);
         long fileLen = randomAccessFile.length();
-        if(fileLen < EntryFileMeta.LEN) {
+        if(fileLen < EntryIndexFileMeta.LEN) {
             entryIndexFileMeta = new EntryIndexFileMeta(indexOffset, termOffset);
 
             randomAccessFile.writeLong(entryIndexFileMeta.MAGIC);
             randomAccessFile.writeLong(indexOffset);
             randomAccessFile.writeLong(termOffset);
-        } else if(fileLen > EntryFileMeta.LEN){
+        } else if(fileLen >= EntryIndexFileMeta.LEN){
             long magic = randomAccessFile.readLong();
-            if(magic != EntryFileMeta.MAGIC) {
+            if(magic != EntryIndexFileMeta.MAGIC) {
                 throw new FileFormatUnSupportException("magic of file should be: "
                         + EntryFileMeta.MAGIC + ", but found: " + magic);
             }
             long startIndex = randomAccessFile.readLong();
             long startTerm = randomAccessFile.readLong();
             entryIndexFileMeta = new EntryIndexFileMeta(startIndex, startTerm);
+
+            if(fileLen > EntryIndexFileMeta.LEN) {
+                assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
+
+                //lastEntryIndexItem = getEntryIndexItem((fileLen - EntryIndexFileMeta.LEN) / (EntryIndexItem.BYTE_LEN + 4));
+                lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE));
+            }
         }
     }
 
     public boolean appendEntryIndexItem(EntryIndexItem entryIndexItem) throws IOException {
-        if(!isMatch(entryIndexItem.getIndex(), entryIndexItem.getTerm())) {
-            return false;
-        }
+//        if(!isMatch(entryIndexItem.getIndex(), entryIndexItem.getTerm())) {
+//            return false;
+//        }
+
         byte[] bytes = entryIndexSerializer.entryIndexToBytes(entryIndexItem);
         randomAccessFile.seek(randomAccessFile.length());
         //写入entry的空间大小
@@ -80,20 +91,40 @@ public class EntryIndexFile {
     }
 
     public EntryIndexItem getEntryIndexItem(long entryIndex) throws IOException {
-        if(entryIndex < entryIndexFileMeta.getPreIndex() || entryIndex < lastEntryIndexItem.getIndex()) {
+        if(entryIndex <= entryIndexFileMeta.getPreIndex() || entryIndex > lastEntryIndexItem.getIndex()) {
             return null;
         }
         long  offset = getEntryOffset(entryIndex);
-        randomAccessFile.seek(offset);
+        return getEntryIndexItemByFileOffset(offset);
+    }
+
+    public EntryIndexItem getEntryIndexItemByFileOffset(long fileOffset) throws IOException {
+        randomAccessFile.seek(fileOffset);
         int len = randomAccessFile.readInt();
         byte[] bytes = new byte[len];
         randomAccessFile.read(bytes);
 
         return entryIndexSerializer.bytesToEntryIndexItem(bytes);
     }
+    public EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
+        if(entryIndex == 1) {
+            return new EntryIndexItem(-1, 0, 0, -1);
+        }
+        return getEntryIndexItem(entryIndex - 1);
+    }
 
     public EntryIndexItem getLastEntryIndexItem() {
         return lastEntryIndexItem;
+    }
+
+    public boolean deleteEntriesFrom(long logIndex) throws IOException {
+        long fileOffset = getEntryOffset(logIndex);
+        if(fileOffset >= randomAccessFile.length()) {
+            return false;
+        }
+        randomAccessFile.seek(fileOffset);
+        randomAccessFile.setLength(fileOffset + 1);
+        return true;
     }
 
     public boolean isEmpty() {
@@ -101,7 +132,7 @@ public class EntryIndexFile {
     }
 
     private long getEntryOffset(long entryIndex) {
-        return (entryIndex - entryIndexFileMeta.getPreIndex()) * EntryIndexItem.getByteLen()
+        return (entryIndex - entryIndexFileMeta.getPreIndex() - 1) * EntryIndexItem.getByteLen()
                 + EntryIndexFileMeta.LEN;
     }
     private boolean isMatch(long preIndex, long preTerm) {
@@ -109,6 +140,9 @@ public class EntryIndexFile {
             return lastEntryIndexItem.getIndex() == preIndex && lastEntryIndexItem.getTerm() == preTerm;
         }
         return entryIndexFileMeta.getPreIndex() == preIndex && entryIndexFileMeta.getPreTerm() == preTerm;
+    }
+    public void close() throws IOException {
+        randomAccessFile.close();
     }
 
 }

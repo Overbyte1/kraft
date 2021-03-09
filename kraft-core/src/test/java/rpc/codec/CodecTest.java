@@ -16,8 +16,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.handler.ServiceInboundHandler;
-import rpc.message.AbstractMessage;
-import rpc.message.MessageType;
 import rpc.message.RequestVoteMessage;
 
 import java.util.ArrayList;

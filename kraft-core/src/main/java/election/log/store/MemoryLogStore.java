@@ -2,7 +2,6 @@ package election.log.store;
 
 import election.LogIndexOutOfBoundsException;
 import election.log.entry.Entry;
-import election.log.entry.EntryMeta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

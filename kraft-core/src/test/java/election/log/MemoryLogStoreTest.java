@@ -4,9 +4,12 @@ import election.LogIndexOutOfBoundsException;
 import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
 import election.log.entry.EntryMeta;
+import election.log.store.EntryGeneration;
 import election.log.store.MemoryLogStore;
 import junit.framework.TestCase;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -134,5 +137,10 @@ public class MemoryLogStoreTest extends TestCase {
     }
 
     public void testGetLastLogIndex() {
+    }
+    public void testFile() {
+        try (EntryGeneration entryGeneration = new EntryGeneration(null, null)) {
+            System.out.println(1);
+        }
     }
 }

@@ -1,9 +1,6 @@
 package schedule;
 
-import com.google.common.util.concurrent.FutureCallback;
-
 import javax.annotation.Nonnull;
-import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 

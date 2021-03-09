@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import rpc.NodeEndpoint;
 import rpc.RpcHandler;
 import rpc.message.*;
-import schedule.SingleThreadTaskExecutor;
 import schedule.TaskExecutor;
 
 public abstract class AbstractMessageHandler implements RequestHandler, ResponseHandler {

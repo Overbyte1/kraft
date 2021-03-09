@@ -1,8 +1,11 @@
 package election.log.entry;
 
+import election.log.serialize.EntrySerializerHandler;
+
 import java.io.Serializable;
 
 public abstract class Entry implements Serializable{
+    private transient static final int BYTE_LEN = 20; // 4 + 8 + 8
     private int type;
     private long term;
     private long index;
@@ -12,6 +15,10 @@ public abstract class Entry implements Serializable{
         this.type = type;
         this.term = term;
         this.index = index;
+
+        if(!EntrySerializerHandler.getInstance().isRegistered()) {
+            registerSerializer();
+        }
     }
 
     public int getType() {
@@ -39,6 +46,31 @@ public abstract class Entry implements Serializable{
         this.index = index;
     }
 
+    protected abstract void registerSerializer();
+
+    public static int getByteLen() {
+        return BYTE_LEN;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Entry entry = (Entry) o;
+
+        if (type != entry.type) return false;
+        if (term != entry.term) return false;
+        return index == entry.index;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type;
+        result = 31 * result + (int) (term ^ (term >>> 32));
+        result = 31 * result + (int) (index ^ (index >>> 32));
+        return result;
+    }
 
     @Override
     public String toString() {

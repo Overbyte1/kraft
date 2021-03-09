@@ -1,8 +1,6 @@
 package rpc.handler;
 
-import election.handler.MessageHandler;
 import election.node.NodeId;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;

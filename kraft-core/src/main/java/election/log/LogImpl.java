@@ -1,6 +1,9 @@
 package election.log;
 
-import election.log.entry.*;
+import election.log.entry.EmptyEntry;
+import election.log.entry.Entry;
+import election.log.entry.EntryMeta;
+import election.log.entry.GeneralEntry;
 import election.log.store.LogStore;
 import election.node.NodeGroup;
 import election.node.NodeId;

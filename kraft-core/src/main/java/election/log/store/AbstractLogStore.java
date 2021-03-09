@@ -12,7 +12,7 @@ import java.util.List;
 public abstract class AbstractLogStore implements LogStore{
     private static final Logger logger = LoggerFactory.getLogger(AbstractLogStore.class);
 
-    private int lastLogIndex;
+    protected long lastLogIndex;
 
 //    @Override
 //    public Entry getLogEntry(long logIndex) {
@@ -56,7 +56,7 @@ public abstract class AbstractLogStore implements LogStore{
             return new ArrayList<>();
         }
         int fromIndex = (int)logIndex;
-        int endIndex = lastLogIndex;
+        int endIndex = (int)lastLogIndex;
         List<Entry> list = new ArrayList<>(endIndex - fromIndex + 1);
         while(fromIndex < endIndex) {
             list.add(getLogEntry(fromIndex));

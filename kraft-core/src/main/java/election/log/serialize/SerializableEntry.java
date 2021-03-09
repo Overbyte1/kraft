@@ -1,4 +1,6 @@
-package election.log.entry;
+package election.log.serialize;
+
+import election.log.entry.Entry;
 
 public interface SerializableEntry {
     byte[] entryToBytes(Entry entry);

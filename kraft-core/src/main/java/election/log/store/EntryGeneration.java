@@ -1,6 +1,8 @@
 package election.log.store;
 
-public class EntryGeneration {
+import java.io.IOException;
+
+public class EntryGeneration implements AutoCloseable {
 //    private String entryDataName;
 //    private String entryIndexName;
 
@@ -26,5 +28,18 @@ public class EntryGeneration {
 
     public void setEntryIndexFile(EntryIndexFile entryIndexFile) {
         this.entryIndexFile = entryIndexFile;
+    }
+
+    public void close() {
+        try {
+            if(entryDataFile != null) {
+                entryDataFile.close();
+            }
+            if(entryIndexFile != null) {
+                entryIndexFile.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

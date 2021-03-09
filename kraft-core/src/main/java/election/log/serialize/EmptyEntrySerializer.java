@@ -1,16 +1,23 @@
 package election.log.serialize;
 
+import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
-import election.log.entry.SerializableEntry;
 
-public class EmptyEntrySerializer implements SerializableEntry {
+public class EmptyEntrySerializer extends AbstractSerializableEntry {
     @Override
     public byte[] entryToBytes(Entry entry) {
-        return new byte[0];
+        return super.entryToBytes(entry);
     }
 
     @Override
     public Entry bytesToEntry(byte[] bytes) {
-        return null;
+        //跳过type字段
+        int offset = Integer.BYTES;
+        long index = ByteArrayConverter.readLong(bytes, offset);
+
+        offset += Long.BYTES;
+        long term = ByteArrayConverter.readLong(bytes, offset);
+
+        return new EmptyEntry(index, term);
     }
 }

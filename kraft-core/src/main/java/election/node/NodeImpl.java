@@ -2,10 +2,16 @@ package election.node;
 
 import election.config.GlobalConfig;
 import election.exception.IndexException;
-import election.handler.*;
+import election.handler.AbstractMessageHandler;
+import election.handler.MessageHandler;
+import election.handler.RequestHandler;
+import election.handler.ResponseHandler;
 import election.log.Log;
 import election.log.entry.Entry;
-import election.role.*;
+import election.role.AbstractRole;
+import election.role.CandidateRole;
+import election.role.FollowerRole;
+import election.role.LeaderRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.NodeEndpoint;

@@ -1,7 +1,7 @@
 package election.log.store;
 
 public class EntryIndexItem {
-    public static final int BYTE_LEN = 12;
+    public static final int BYTE_LEN = 28;
     private int type;
     private long index;
     private long term;

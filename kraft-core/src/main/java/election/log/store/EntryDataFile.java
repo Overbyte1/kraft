@@ -11,7 +11,7 @@ public class EntryDataFile {
     private RandomAccessFile randomAccessFile;
     private EntryFileMeta entryFileMeta;
     private static final String openMode = "rw";
-    private static final int indexByteLen = 8;
+    //private static final int indexByteLen = 8;
 
 
     private EntrySerializerHandler entrySerializerHandler = EntrySerializerHandler.getInstance();
@@ -31,10 +31,11 @@ public class EntryDataFile {
         randomAccessFile = new RandomAccessFile(file, openMode);
         if(randomAccessFile.length() < EntryFileMeta.LEN) {
             entryFileMeta = new EntryFileMeta(0);
+
             randomAccessFile.writeLong(entryFileMeta.MAGIC);
             randomAccessFile.writeLong(entryFileMeta.getOffset());
             //刚创建时还没有保存entry，当前文件保存entry的index为-1，表示为空
-            randomAccessFile.writeLong(-1);
+            //randomAccessFile.writeLong(-1);
         } else {
             long magic = randomAccessFile.readLong();
             if(magic != EntryFileMeta.MAGIC) {
@@ -69,14 +70,14 @@ public class EntryDataFile {
     public long appendEntry(Entry entry) throws IOException {
         long offset = randomAccessFile.length();
         byte[] bytes = entrySerializerHandler.entryToBytes(entry);
-        randomAccessFile.seek(offset - indexByteLen);
+        randomAccessFile.seek(offset);
         //写入entry的空间大小
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据
         randomAccessFile.write(bytes);
         //写入最后一个entry的index
-        lastEntryIndex = entry.getIndex();
-        randomAccessFile.writeLong(lastEntryIndex);
+//        lastEntryIndex = entry.getIndex();
+//        randomAccessFile.writeLong(lastEntryIndex);
         return offset;
     }
 
@@ -86,7 +87,7 @@ public class EntryDataFile {
      * @return 该偏移量处的entry
      * @throws IOException
      */
-    public Entry readEntry(long offset) throws IOException {
+    public Entry getEntry(long offset) throws IOException {
         if(offset > randomAccessFile.length()) {
             return null;
         }
@@ -95,6 +96,16 @@ public class EntryDataFile {
         byte[] bytes = new byte[size];
         randomAccessFile.read(bytes);
         return entrySerializerHandler.bytesToEntry(bytes);
+    }
+    public boolean deleteFromOffset(long offset) throws IOException {
+        if(offset >= randomAccessFile.length()) {
+            return false;
+        }
+        randomAccessFile.setLength(offset);
+        return true;
+    }
+    public void close() throws IOException {
+        randomAccessFile.close();
     }
 
 }

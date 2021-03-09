@@ -1,7 +1,7 @@
 package election.log.store;
 
 public class EntryIndexFileMeta {
-    public static final int LEN = 8;
+    public static final int LEN = 24; //8 + 8 + 8
     public static final long MAGIC = 0x8848;
 
     private long preIndex;

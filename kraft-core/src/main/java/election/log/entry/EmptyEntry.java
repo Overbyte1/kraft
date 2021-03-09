@@ -1,17 +1,20 @@
 package election.log.entry;
 
+import election.log.serialize.EmptyEntrySerializer;
+import election.log.serialize.EntrySerializerHandler;
+
 public class EmptyEntry extends Entry  {
     public EmptyEntry(long term, long index) {
         super(EntryType.Empty, term, index);
     }
 
     @Override
-    public byte[] entryToBytes(Entry entry) {
-        return new byte[0];
+    protected void registerSerializer() {
+        EntrySerializerHandler.getInstance().register(EntryType.Empty, EmptyEntry.class, new EmptyEntrySerializer());
     }
 
     @Override
-    public Entry bytesToEntry(byte[] bytes) {
-        return null;
+    public boolean equals(Object obj) {
+        return super.equals(obj);
     }
 }
