@@ -132,7 +132,7 @@ public class EntryIndexFile {
     }
 
     private long getEntryOffset(long entryIndex) {
-        return (entryIndex - entryIndexFileMeta.getPreIndex() - 1) * EntryIndexItem.getByteLen()
+        return (entryIndex - entryIndexFileMeta.getPreIndex() - 1) * (EntryIndexItem.getByteLen() + ITEM_LENGTH_BYTE)
                 + EntryIndexFileMeta.LEN;
     }
     private boolean isMatch(long preIndex, long preTerm) {

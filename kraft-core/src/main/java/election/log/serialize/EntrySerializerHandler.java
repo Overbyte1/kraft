@@ -14,8 +14,8 @@ public class EntrySerializerHandler implements EntrySerializer {
         classEntrySerializerMap = new HashMap<>();
     }
 
-    public boolean isRegistered() {
-        return entrySerializerMap.size() > 0;
+    public boolean isRegistered(Class<?> clazz) {
+        return classEntrySerializerMap.get(clazz) != null;
     }
 
     @Override

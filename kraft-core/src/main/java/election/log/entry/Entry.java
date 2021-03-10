@@ -16,7 +16,7 @@ public abstract class Entry implements Serializable{
         this.term = term;
         this.index = index;
 
-        if(!EntrySerializerHandler.getInstance().isRegistered()) {
+        if(!EntrySerializerHandler.getInstance().isRegistered(this.getClass())) {
             registerSerializer();
         }
     }

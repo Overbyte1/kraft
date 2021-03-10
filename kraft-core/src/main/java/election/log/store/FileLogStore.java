@@ -13,6 +13,8 @@ import java.util.List;
  * 基于文件进行存储，需要考虑：
  * 1. 文件的存储格式、位置、命名
  * 2. 写回文件，读取文件的时机
+ *
+ * TODO：将所有的Generation进行抽象，让FileLogStore好像只在操作一个Generation
  */
 public class FileLogStore extends AbstractLogStore implements LogStore {
     private static final Logger logger = LoggerFactory.getLogger(FileLogStore.class);
@@ -74,8 +76,6 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                     }
                     EntryIndexItem midIndexItem = midGeneration.getEntryIndexFile().getLastEntryIndexItem();
 
-                    //midGeneration.getEntryDataFile().close();
-                    //midGeneration.getEntryIndexFile().close();
                     if (logIndex > midIndexItem.getIndex()) {
                         low = mid + 1;
                     } else if (logIndex < midIndexItem.getIndex()) {
@@ -120,9 +120,17 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         try {
             updateFiles();
 
-            EntryIndexItem preEntryIndexItem = entryIndexFile.getPreEntryIndexItem(entry.getIndex());
-            if(preEntryIndexItem.getTerm() != preTerm || preEntryIndexItem.getIndex() != preLogIndex) {
+            if(preLogIndex != entry.getIndex() - 1) {
                 return false;
+            }
+            EntryIndexItem preEntryIndexItem = getPreEntryIndexItem(entry.getIndex());
+            if(preEntryIndexItem == null ||  preEntryIndexItem.getTerm() != preTerm
+                    || preEntryIndexItem.getIndex() != preLogIndex) {
+                return false;
+            }
+            //发生冲突，删除后面的日志
+            if(entry.getIndex() <= lastLogIndex) {
+                deleteLogEntriesFrom(entry.getIndex());
             }
             //添加到 data 文件
             long fileOffset = entryDataFile.appendEntry(entry);
@@ -143,6 +151,33 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     }
 
     /**
+     * 获取entryIndex位置的前一个日志的 index 和 term，entryIndexFile和entryDataFile会跟随进行切换
+     * @param entryIndex
+     */
+    private EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
+        EntryIndexItem indexItem = entryIndexFile.getPreEntryIndexItem(entryIndex);
+        if(indexItem != null) {
+            return indexItem;
+        }
+        //从后往前找
+        int generationIndex = generationHandler.getCurrentGenerationIndex() - 1;
+        while (generationIndex >= 0){
+            EntryGeneration entryGeneration = new EntryGeneration(entryDataFile, entryIndexFile);
+            EntryIndexFile indexFile = entryGeneration.getEntryIndexFile();
+            indexItem = indexFile.getPreEntryIndexItem(entryIndex);
+            if(indexFile != null) {
+                entryDataFile = entryGeneration.getEntryDataFile();
+                entryIndexFile = entryGeneration.getEntryIndexFile();
+                return indexItem;
+            }
+            generationIndex--;
+            entryGeneration.close();
+        }
+        //没找到
+        return null;
+    }
+
+    /**
      * 如果文件大小超过限制，就创建新的
      * @throws IOException
      */
@@ -151,6 +186,8 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             EntryIndexItem entryIndexItem = entryIndexFile.getLastEntryIndexItem();
             EntryGeneration entryGeneration = generationHandler
                     .createEntryGeneration(entryIndexItem.getIndex(), entryIndexItem.getTerm());
+            entryIndexFile.close();
+            entryDataFile.close();
             entryDataFile = entryGeneration.getEntryDataFile();
             entryIndexFile = entryGeneration.getEntryIndexFile();
         }

@@ -28,7 +28,7 @@ public class ByteArrayConverter {
 
     public static long readLong(byte[] b, int offset) {
         int low = readInt(b, offset);
-        int high = readInt(b, offset + 1);
+        int high = readInt(b, offset + Integer.BYTES);
         return low | (high << 32);
     }
 }
