@@ -65,6 +65,10 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             }
             //还是二分查找，根据每个索引文件包含的最大index进行二分，直到定位到包含索引logIndex的文件
             int currentGenerationIndex = generationHandler.getCurrentGenerationIndex();
+            //如果只有一个文件，说明找不到该index对应的entry
+            if(currentGenerationIndex == 0) {
+                return null;
+            }
             int low = 0, high = currentGenerationIndex - 1, mid;
             //EntryGeneration midGeneration;
             while(low < high) {
@@ -202,6 +206,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                 while(bufferList.get(idx).getIndex() >= logIndex) {
                     bufferList.remove(idx);
                 }
+                lastLogIndex = logIndex - 1;
                 return true;
             }
             //定位到具体的文件，从后往前找，边找边删
@@ -212,11 +217,18 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                     entryDataFile.close();
                     entryIndexFile.close();
                     generationHandler.deleteLatestGeneration();
+                    EntryGeneration latestGeneration = generationHandler.getLatestGeneration();
+                    entryDataFile = latestGeneration.getEntryDataFile();
+                    entryIndexFile = latestGeneration.getEntryIndexFile();
                 }
             } while (entryIndexItem == null);
             //定位到具体的文件后随后删除该文件后面的内容
-            return entryIndexFile.deleteEntriesFrom(entryIndexItem.getIndex())
+            boolean res =  entryIndexFile.deleteEntriesFrom(entryIndexItem.getIndex())
                     && entryDataFile.deleteFromOffset(entryIndexItem.getOffset());
+            if(res) {
+                lastLogIndex = logIndex - 1;
+            }
+            return res;
         } catch (IOException e) {
             e.printStackTrace();
             return false;

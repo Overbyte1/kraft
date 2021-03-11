@@ -2,7 +2,6 @@ package election.log.store;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 
 /**
  * 为避免所有entry都存在一个文件中导致文件过大，所以将entry保存到不同文件，因为一个entry文件会搭配一个entryIndex文件，
@@ -32,8 +31,8 @@ public class EntryGenerationHandler {
             initGeneration();
         }
         currentGenerationIndex++;
-        String entryDataName = getEntryDataFilename();
-        String entryIndexName = getEntryIndexFileName();
+        String entryDataName = getLatestEntryDataFilename();
+        String entryIndexName = getLatestEntryIndexFileName();
         //创建文件
         File entryDatafile = new File(entryDataName);
         if(!entryDatafile.exists()) {
@@ -54,7 +53,15 @@ public class EntryGenerationHandler {
         //二分查找
         while(low < high) {
             mid = low + (high - low + 1) / 2;
-            fileName = getFilename(entryDataFilenameSuffix);
+            if(stringBuilder.length() > 0) {
+                stringBuilder.delete(0, stringBuilder.length());
+            }
+            fileName = stringBuilder.append(rootPath)
+                    .append(commonPrefix)
+                    .append(mid)
+                    .append(entryDataFilenameSuffix)
+                    .toString();
+
             file = new File(fileName);
             if(file.exists()) {
                 low = mid;
@@ -63,8 +70,8 @@ public class EntryGenerationHandler {
             }
         }
         currentGenerationIndex = low;
-        String entryDataName = getEntryDataFilename();
-        String entryIndexName = getEntryIndexFileName();
+        String entryDataName = getLatestEntryDataFilename();
+        String entryIndexName = getLatestEntryIndexFileName();
         file = new File(entryDataName);
         if(!file.exists()) {
             file.createNewFile();
@@ -91,8 +98,8 @@ public class EntryGenerationHandler {
         if(currentGenerationIndex < 0) {
             initGeneration();
         }
-        String entryDataName = getEntryDataFilename();
-        String entryIndexName = getEntryIndexFileName();
+        String entryDataName = getLatestEntryDataFilename();
+        String entryIndexName = getLatestEntryIndexFileName();
 
         EntryDataFile entryDataFile;
         EntryIndexFile entryIndexFile;
@@ -110,8 +117,9 @@ public class EntryGenerationHandler {
         if(generation > currentGenerationIndex) {
             return null;
         }
-        String entryDataName = getEntryDataFilename();
-        String entryIndexName = getEntryIndexFileName();
+
+        String entryDataName = getEntryDataFilenameByIndex(generation);
+        String entryIndexName = getEntryIndexFilenameByIndex(generation);
 
         EntryDataFile entryDataFile = new EntryDataFile(new File(entryDataName));
         EntryIndexFile entryIndexFile = new EntryIndexFile(new File(entryIndexName));
@@ -124,21 +132,27 @@ public class EntryGenerationHandler {
     }
     
     
-    private String getFilename(String suffix) {
+    private String getFilename(int generationIndex, String suffix) {
         if(stringBuilder.length() != 0) {
             stringBuilder.delete(0, stringBuilder.length());
         }
         stringBuilder.append(rootPath)
                 .append(commonPrefix)
-                .append(currentGenerationIndex)
+                .append(generationIndex)
                 .append(suffix);
         return stringBuilder.toString();
     }
-    private String getEntryIndexFileName() {
-        return getFilename(entryIndexFileNameSuffix);
+    private String getLatestEntryIndexFileName() {
+        return getFilename(currentGenerationIndex, entryIndexFileNameSuffix);
     }
-    private String getEntryDataFilename() {
-        return getFilename(entryDataFilenameSuffix);
+    private String getLatestEntryDataFilename() {
+        return getFilename(currentGenerationIndex, entryDataFilenameSuffix);
+    }
+    private String getEntryDataFilenameByIndex(int generationIndex) {
+        return getFilename(generationIndex, entryDataFilenameSuffix);
+    }
+    private String getEntryIndexFilenameByIndex(int generationIndex) {
+        return getFilename(generationIndex, entryIndexFileNameSuffix);
     }
 
     /**
@@ -146,8 +160,8 @@ public class EntryGenerationHandler {
      * @return
      */
     public boolean deleteLatestGeneration() {
-        String entryDataName = getEntryDataFilename();
-        String entryIndexName = getEntryIndexFileName();
+        String entryDataName = getLatestEntryDataFilename();
+        String entryIndexName = getLatestEntryIndexFileName();
         File entryDataFile = new File(entryDataName);
         File entryIndexFile = new File(entryIndexName);
         if(entryDataFile.delete() && entryIndexFile.delete()) {

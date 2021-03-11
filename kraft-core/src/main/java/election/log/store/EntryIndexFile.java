@@ -29,11 +29,14 @@ public class EntryIndexFile {
     }
     public EntryIndexFile(File file) throws IOException {
         randomAccessFile = new RandomAccessFile(file, openMode);
+        initEntryIndexFileMeta();
         long fileLen = randomAccessFile.length();
 
         assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
 
-        lastEntryIndexItem = getEntryIndexItem((fileLen - EntryIndexFileMeta.LEN) / EntryIndexItem.BYTE_LEN);
+        //preIndex是上一个文件最后的index，如果当前文件是第0个文件，没有前一个文件了，
+        // 此时entryIndexFileMeta.getPreIndex()==0
+        lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE));
     }
 
     //TODO:提到抽象类
@@ -51,14 +54,7 @@ public class EntryIndexFile {
             randomAccessFile.writeLong(indexOffset);
             randomAccessFile.writeLong(termOffset);
         } else if(fileLen >= EntryIndexFileMeta.LEN){
-            long magic = randomAccessFile.readLong();
-            if(magic != EntryIndexFileMeta.MAGIC) {
-                throw new FileFormatNotSupportException("magic of file should be: "
-                        + EntryFileMeta.MAGIC + ", but found: " + magic);
-            }
-            long startIndex = randomAccessFile.readLong();
-            long startTerm = randomAccessFile.readLong();
-            entryIndexFileMeta = new EntryIndexFileMeta(startIndex, startTerm);
+            initEntryIndexFileMeta();
 
             if(fileLen > EntryIndexFileMeta.LEN) {
                 assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
@@ -67,6 +63,17 @@ public class EntryIndexFile {
                 lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE));
             }
         }
+    }
+
+    private void initEntryIndexFileMeta() throws IOException {
+        long magic = randomAccessFile.readLong();
+        if(magic != EntryIndexFileMeta.MAGIC) {
+            throw new FileFormatNotSupportException("magic of file should be: "
+                    + EntryFileMeta.MAGIC + ", but found: " + magic);
+        }
+        long startIndex = randomAccessFile.readLong();
+        long startTerm = randomAccessFile.readLong();
+        entryIndexFileMeta = new EntryIndexFileMeta(startIndex, startTerm);
     }
 
     public boolean appendEntryIndexItem(EntryIndexItem entryIndexItem) throws IOException {

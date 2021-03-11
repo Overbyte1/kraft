@@ -1,35 +1,50 @@
 package election.log.store;
 
 
-import election.log.Log;
 import election.log.entry.EmptyEntry;
 import election.log.entry.Entry;
 import election.log.entry.GeneralEntry;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+
+import static org.junit.Assert.assertEquals;
 
 public class FileLogStoreTest {
     private FileLogStore fileLogStore;
+    private String path = "./data/";
     @Before
     public void init() {
         try {
-            fileLogStore = new FileLogStore("./data/");
+            fileLogStore = new FileLogStore(path);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     private void deleteAllFiles() {
-
+        File file = new File(path);
+        deleteFile(file);
+    }
+    private void deleteFile(File file) {
+        if(file.isFile()) {
+            file.delete();
+            return;
+        }
+        File[] files = file.listFiles();
+        for (File file1 : files) {
+            deleteFile(file1);
+        }
     }
 
     @Test
     public void testGetLogEntry() {
-
+        testAppendEntry();
+        Entry logEntry = fileLogStore.getLogEntry(100);
+        assertEquals(100, logEntry.getIndex());
     }
 
     @Test
@@ -46,6 +61,7 @@ public class FileLogStoreTest {
     }
     @Test
     public void testAppendEntry() {
+
         Entry entry1 = new EmptyEntry(1, 1);
         boolean appendEmptyEntry = fileLogStore.appendEmptyEntry(entry1);
         assertEquals(true, appendEmptyEntry);
@@ -73,13 +89,27 @@ public class FileLogStoreTest {
         }
     }
 
+    @Test
     public void testDeleteLogEntriesFrom() {
+        testAppendEntry();
+        long deleteIndex = 1998;
+        boolean b = fileLogStore.deleteLogEntriesFrom(deleteIndex);
+        assertEquals(true, b);
+        long index = fileLogStore.getLastEntry().getIndex();
+        assertEquals(deleteIndex - 1, index);
+
+        deleteIndex = 1500;
+        b = fileLogStore.deleteLogEntriesFrom(deleteIndex);
+        assertEquals(true, b);
+        index = fileLogStore.getLastEntry().getIndex();
+        assertEquals(deleteIndex - 1, index);
 
     }
     @After
     public void destroy() {
         try {
             fileLogStore.close();
+            deleteAllFiles();
         } catch (IOException e) {
             e.printStackTrace();
         }
