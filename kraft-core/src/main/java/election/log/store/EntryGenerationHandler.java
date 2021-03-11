@@ -19,7 +19,7 @@ public class EntryGenerationHandler {
 
     private int currentGenerationIndex = -1;
 
-    private long lastGenerationEntryIndex;
+    //private long lastGenerationEntryIndex;
 
 
     public EntryGenerationHandler(String path) {
@@ -32,8 +32,8 @@ public class EntryGenerationHandler {
             initGeneration();
         }
         currentGenerationIndex++;
-        String entryDataName = commonPrefix + currentGenerationIndex + entryDataFilenameSuffix;
-        String entryIndexName = commonPrefix + currentGenerationIndex + entryIndexFileNameSuffix;
+        String entryDataName = getEntryDataFilename();
+        String entryIndexName = getEntryIndexFileName();
         //创建文件
         File entryDatafile = new File(entryDataName);
         if(!entryDatafile.exists()) {
@@ -43,13 +43,9 @@ public class EntryGenerationHandler {
         if(!entryIndexFile.exists()) {
             entryIndexFile.createNewFile();
         }
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(entryIndexName, "r");){
-            //TODO:change 8
-            randomAccessFile.seek(randomAccessFile.length() - 8);
-            lastGenerationEntryIndex = randomAccessFile.readLong();
-            return new EntryGeneration(new EntryDataFile(entryIndexFile),
-                    new EntryIndexFile(entryIndexFile, preIndex, preTerm));
-        }
+
+        return new EntryGeneration(new EntryDataFile(entryDatafile),
+                new EntryIndexFile(entryIndexFile, preIndex, preTerm));
     }
     private void initGeneration() throws IOException {
         File file;
@@ -57,8 +53,8 @@ public class EntryGenerationHandler {
         String fileName = null;
         //二分查找
         while(low < high) {
-            mid = low + (high - low) / 2;
-            fileName = commonPrefix + mid + entryDataFilenameSuffix;
+            mid = low + (high - low + 1) / 2;
+            fileName = getFilename(entryDataFilenameSuffix);
             file = new File(fileName);
             if(file.exists()) {
                 low = mid;
@@ -67,8 +63,8 @@ public class EntryGenerationHandler {
             }
         }
         currentGenerationIndex = low;
-        String entryDataName = commonPrefix + currentGenerationIndex + entryDataFilenameSuffix;
-        String entryIndexName = commonPrefix + currentGenerationIndex + entryIndexFileNameSuffix;
+        String entryDataName = getEntryDataFilename();
+        String entryIndexName = getEntryIndexFileName();
         file = new File(entryDataName);
         if(!file.exists()) {
             file.createNewFile();
@@ -77,16 +73,16 @@ public class EntryGenerationHandler {
         if(!file.exists()) {
             file.createNewFile();
         }
-        if(currentGenerationIndex == 0) {
-            lastGenerationEntryIndex = 0;
-        } else { //获取上一个Generation的最后一个entryIndex
-            try (RandomAccessFile randomAccessFile = new RandomAccessFile(entryIndexName, "r")) {
-
-                //TODO:change 8
-                randomAccessFile.seek(randomAccessFile.length() - 8);
-                lastGenerationEntryIndex = randomAccessFile.readLong();
-            }
-        }
+//        if(currentGenerationIndex == 0) {
+//            lastGenerationEntryIndex = 0;
+//        } else { //获取上一个Generation的最后一个entryIndex
+//            try (RandomAccessFile randomAccessFile = new RandomAccessFile(entryIndexName, "r")) {
+//
+//                //TODO:change 8
+//                randomAccessFile.seek(randomAccessFile.length() - 8);
+//                lastGenerationEntryIndex = randomAccessFile.readLong();
+//            }
+//        }
     }
 
 
@@ -150,8 +146,8 @@ public class EntryGenerationHandler {
      * @return
      */
     public boolean deleteLatestGeneration() {
-        String entryDataName = commonPrefix + currentGenerationIndex + entryDataFilenameSuffix;
-        String entryIndexName = commonPrefix + currentGenerationIndex + entryIndexFileNameSuffix;
+        String entryDataName = getEntryDataFilename();
+        String entryIndexName = getEntryIndexFileName();
         File entryDataFile = new File(entryDataName);
         File entryIndexFile = new File(entryIndexName);
         if(entryDataFile.delete() && entryIndexFile.delete()) {

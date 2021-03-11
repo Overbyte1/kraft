@@ -53,7 +53,7 @@ public class EntryIndexFile {
         } else if(fileLen >= EntryIndexFileMeta.LEN){
             long magic = randomAccessFile.readLong();
             if(magic != EntryIndexFileMeta.MAGIC) {
-                throw new FileFormatUnSupportException("magic of file should be: "
+                throw new FileFormatNotSupportException("magic of file should be: "
                         + EntryFileMeta.MAGIC + ", but found: " + magic);
             }
             long startIndex = randomAccessFile.readLong();
@@ -76,6 +76,7 @@ public class EntryIndexFile {
 
         byte[] bytes = entryIndexSerializer.entryIndexToBytes(entryIndexItem);
         randomAccessFile.seek(randomAccessFile.length());
+        System.out.println(randomAccessFile.length() + " " + entryIndexItem);
         //写入entry的空间大小
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据
@@ -107,8 +108,9 @@ public class EntryIndexFile {
         return entryIndexSerializer.bytesToEntryIndexItem(bytes);
     }
     public EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
-        if(entryIndex == 1) {
-            return new EntryIndexItem(-1, 0, 0, -1);
+        if(entryIndex - 1 == entryIndexFileMeta.getPreIndex()) {
+            return new EntryIndexItem(-1, entryIndexFileMeta.getPreIndex(),
+                    entryIndexFileMeta.getPreTerm(), -1);
         }
         return getEntryIndexItem(entryIndex - 1);
     }
@@ -123,7 +125,7 @@ public class EntryIndexFile {
             return false;
         }
         randomAccessFile.seek(fileOffset);
-        randomAccessFile.setLength(fileOffset + 1);
+        randomAccessFile.setLength(fileOffset);
         return true;
     }
 

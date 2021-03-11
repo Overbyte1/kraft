@@ -39,7 +39,7 @@ public class EntryDataFile {
         } else {
             long magic = randomAccessFile.readLong();
             if(magic != EntryFileMeta.MAGIC) {
-                throw new FileFormatUnSupportException("magic of file should be: "
+                throw new FileFormatNotSupportException("magic of file should be: "
                         + EntryFileMeta.MAGIC + ", but found: " + magic);
             }
             long offset = randomAccessFile.readLong();

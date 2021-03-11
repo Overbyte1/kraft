@@ -50,4 +50,14 @@ public class EntryIndexItem {
     public void setOffset(long offset) {
         this.offset = offset;
     }
+
+    @Override
+    public String toString() {
+        return "EntryIndexItem{" +
+                "type=" + type +
+                ", index=" + index +
+                ", term=" + term +
+                ", offset=" + offset +
+                '}';
+    }
 }

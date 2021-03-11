@@ -23,11 +23,13 @@ public class FileLogStoreTest {
             e.printStackTrace();
         }
     }
+    private void deleteAllFiles() {
+
+    }
 
     @Test
     public void testGetLogEntry() {
-        File file = new File("abc/cde");
-        file.mkdirs();
+
     }
 
     @Test
@@ -39,6 +41,7 @@ public class FileLogStoreTest {
         assertEquals(entry1, entry);
 
         Entry entry2 = new EmptyEntry(1, 1);
+
 
     }
     @Test
@@ -60,6 +63,14 @@ public class FileLogStoreTest {
 
         assertEquals(entry3, fileLogStore.getLastEntry());
 
+        long preTerm = 2, preIndex = 2;
+        byte[] bytes = new byte[]{-1};
+        for(int i = 0; i < 2000; i++) {
+            Entry generalEntry = new GeneralEntry(preTerm, preIndex + 1, bytes);
+            assertEquals(true, fileLogStore.appendEntry(generalEntry, preTerm, preIndex));
+            assertEquals(generalEntry, fileLogStore.getLogEntry(generalEntry.getIndex()));
+            preIndex = generalEntry.getIndex();
+        }
     }
 
     public void testDeleteLogEntriesFrom() {

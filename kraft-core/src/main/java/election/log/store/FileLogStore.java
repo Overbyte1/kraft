@@ -24,7 +24,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     private EntryGenerationHandler generationHandler;
 
     //TODO:配置成参数，默认2G
-    private int maxFileSize = 2 * 1024 * 1024;
+    private int maxFileSize = 10 * 1024;
 
     private List<Entry> bufferList = new ArrayList<>();
 
@@ -143,7 +143,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
 
         } catch (IOException e) {
             //e.printStackTrace();
-            logger.warn("fail to append entry, entry is: {}, preTerm is {}, preLogIndex is {}, cause is: ",
+            logger.warn("fail to append entry, entry is: {}, preTerm is {}, preLogIndex is {}, cause is: {}",
                     entry, preTerm, preLogIndex, e.getMessage());
             return false;
         }

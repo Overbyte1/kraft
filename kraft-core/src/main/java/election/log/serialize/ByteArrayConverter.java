@@ -5,9 +5,9 @@ public class ByteArrayConverter {
     public static int writeInt(byte[] b, int offset, int n) {
         int mask = 0xFF;
         b[offset++] = (byte)(mask & n);
-        b[offset++] = (byte)(mask & (n << 8));
-        b[offset++] = (byte)(mask & (n << 16));
-        b[offset++] = (byte)(mask & (n << 24));
+        b[offset++] = (byte)(mask & (n >> 8));
+        b[offset++] = (byte)(mask & (n >> 16));
+        b[offset++] = (byte)(mask & (n >> 24));
         return offset;
     }
 
@@ -19,10 +19,10 @@ public class ByteArrayConverter {
 
     public static int readInt(byte[] b, int offset) {
         int ret = 0;
-        ret |= b[offset++];
-        ret |= (b[offset++] << 8);
-        ret |= (b[offset++] << 16);
-        ret |= (b[offset++] << 24);
+        ret |= (0xFF & b[offset++]);
+        ret |= ((0xFF & b[offset++]) << 8);
+        ret |= ((0xFF & b[offset++]) << 16);
+        ret |= ((0xFF & b[offset++]) << 24);
         return ret;
     }
 
