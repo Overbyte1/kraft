@@ -10,7 +10,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 import static org.junit.Assert.assertEquals;
 
@@ -31,7 +32,10 @@ public class FileLogStoreTest {
     }
     private void deleteFile(File file) {
         if(file.isFile()) {
-            file.delete();
+            boolean delete = file.delete();
+            if(!delete) {
+                System.out.println(file.getName());
+            }
             return;
         }
         File[] files = file.listFiles();

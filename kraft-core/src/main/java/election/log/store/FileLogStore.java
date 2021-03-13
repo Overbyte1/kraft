@@ -90,10 +90,12 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                     }
                 }
             }
-            EntryGeneration generation = generationHandler.getGeneration(low);
-            EntryIndexItem targetIndexItem = generation.getEntryIndexFile().getEntryIndexItem(logIndex);
-            if(targetIndexItem != null) {
-                return generation.getEntryDataFile().getEntry(targetIndexItem.getOffset());
+            //定位到该Entry在哪代文件
+            try (EntryGeneration generation = generationHandler.getGeneration(low)) {
+                EntryIndexItem targetIndexItem = generation.getEntryIndexFile().getEntryIndexItem(logIndex);
+                if (targetIndexItem != null) {
+                    return generation.getEntryDataFile().getEntry(targetIndexItem.getOffset());
+                }
             }
         } catch (IOException e) {
             logger.warn("fail to read log entry, exception message: {}", e.getMessage());
