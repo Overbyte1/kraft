@@ -1,6 +1,6 @@
 package election.role;
 
-import election.log.entry.GeneralEntry;
+import log.entry.GeneralEntry;
 import election.node.NodeId;
 import election.node.NodeIdGenerator;
 

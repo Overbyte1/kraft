@@ -1,10 +1,10 @@
 package election.nodeimpl;
 
 import election.config.GlobalConfig;
-import election.log.Log;
-import election.log.LogImpl;
-import election.log.store.LogStore;
-import election.log.store.MemoryLogStore;
+import log.Log;
+import log.LogImpl;
+import log.store.LogStore;
+import log.store.MemoryLogStore;
 import election.node.GroupMember;
 import election.node.NodeGroup;
 import election.node.NodeId;

@@ -1,11 +1,11 @@
 package rpc.requestvote;
 
 import election.config.GlobalConfig;
-import election.log.DefaultLog;
-import election.log.Log;
-import election.log.LogImpl;
-import election.log.store.LogStore;
-import election.log.store.MemoryLogStore;
+import log.DefaultLog;
+import log.Log;
+import log.LogImpl;
+import log.store.LogStore;
+import log.store.MemoryLogStore;
 import election.node.*;
 import election.role.AbstractRole;
 import election.role.FollowerRole;
