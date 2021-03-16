@@ -32,11 +32,44 @@ public class EntryIndexFile {
         initEntryIndexFileMeta();
         long fileLen = randomAccessFile.length();
 
-        assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
+        assert isLengthLegal(randomAccessFile.length());
+        //清除不完整数据
+        clearIncompleteData();
 
         //preIndex是上一个文件最后的index，如果当前文件是第0个文件，没有前一个文件了，
         // 此时entryIndexFileMeta.getPreIndex()==0
-        lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE));
+        lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - getEntryIndexItemStoreByte());
+    }
+
+
+    /**
+     * 判断文件的长度是否合法，当系统崩溃时可能导致只写入了部分数据，所以需要加以检测
+     * @param fileLen 文件长度
+     * @return
+     */
+    private boolean isLengthLegal(long fileLen) {
+        return (fileLen - EntryIndexFileMeta.getLEN()) % getEntryIndexItemStoreByte() == 0;
+    }
+
+    /**
+     * 系统崩溃可能会导致最后一个EntryIndexItem写入不完整，这部分不完整的数据需要清除
+     * @throws IOException
+     */
+    private void clearIncompleteData() throws IOException {
+        long fileLen = randomAccessFile.length();
+        if(!isLengthLegal(fileLen)) {
+            long lastByte = (fileLen - EntryIndexFileMeta.getLEN()) % getEntryIndexItemStoreByte();
+            randomAccessFile.setLength(fileLen - lastByte);
+        }
+    }
+
+    /**
+     * 获取EntryIndexItem在存储时实际需要的空间，单位为字节。每个item在存储时需要先写入其长度再写入其序列化得到的
+     * 字节数组
+     * @return
+     */
+    private int getEntryIndexItemStoreByte() {
+        return ITEM_LENGTH_BYTE + EntryIndexItem.BYTE_LEN;
     }
 
     //TODO:提到抽象类
@@ -57,10 +90,10 @@ public class EntryIndexFile {
             initEntryIndexFileMeta();
 
             if(fileLen > EntryIndexFileMeta.LEN) {
-                assert (fileLen - EntryIndexFileMeta.LEN)  % (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE) == 0;
 
-                //lastEntryIndexItem = getEntryIndexItem((fileLen - EntryIndexFileMeta.LEN) / (EntryIndexItem.BYTE_LEN + 4));
-                lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - (EntryIndexItem.BYTE_LEN + ITEM_LENGTH_BYTE));
+                assert isLengthLegal(randomAccessFile.length());
+
+                lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - getEntryIndexItemStoreByte());
             }
         }
     }
