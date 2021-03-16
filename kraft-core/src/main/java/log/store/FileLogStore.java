@@ -23,10 +23,15 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     private EntryIndexFile entryIndexFile;
     private EntryGenerationHandler generationHandler;
 
+    //TODO:参数配置，buffer容量
+    private final int BUFFER_SIZE = 1024;
+
     //TODO:配置成参数，默认2G
     private int maxFileSize = 10 * 1024;
 
-    private List<Entry> bufferList = new ArrayList<>();
+    private List<Entry> entryBuffer;
+    private List<EntryIndexItem> entryIndexItemBuffer;
+
 
     public FileLogStore(String path) throws IOException {
         mkdir(path);
@@ -42,6 +47,10 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         } else {
             lastLogIndex = 0;
         }
+
+        entryBuffer = new ArrayList<>(BUFFER_SIZE);
+        entryIndexItemBuffer = new ArrayList<>(BUFFER_SIZE);
+        //TODO：完善buffer
     }
     private void mkdir(String path) {
         File file = new File(path);
@@ -54,9 +63,9 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         if(logIndex > lastLogIndex) {
             return null;
         }
-        if(!bufferList.isEmpty() && logIndex >= bufferList.get(0).getIndex()) {
-            long startLogIndex = bufferList.get(0).getIndex();
-            return bufferList.get((int)(logIndex - startLogIndex));
+        if(!entryBuffer.isEmpty() && logIndex >= entryBuffer.get(0).getIndex()) {
+            long startLogIndex = entryBuffer.get(0).getIndex();
+            return entryBuffer.get((int)(logIndex - startLogIndex));
         }
         try {
             EntryIndexItem entryIndexItem = entryIndexFile.getEntryIndexItem(logIndex);
@@ -145,8 +154,13 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
 
             lastLogIndex++;
             //添加到 index 文件
-            return entryIndexFile.appendEntryIndexItem(entryIndexItem);
-
+            boolean result =  entryIndexFile.appendEntryIndexItem(entryIndexItem);
+            if(result) {
+                //添加到buffer
+                entryBuffer.add(entry);
+                return true;
+            }
+            return false;
         } catch (IOException e) {
             //e.printStackTrace();
             logger.warn("fail to append entry, entry is: {}, preTerm is {}, preLogIndex is {}, cause is: {}",
@@ -154,6 +168,16 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             return false;
         }
 
+    }
+    private void addToBuffer(Entry entry) {
+
+    }
+    private Entry getEntryFromBuffer(long entryIndex) {
+        if(!entryBuffer.isEmpty() && entryIndex >= entryBuffer.get(0).getIndex()) {
+            long startLogIndex = entryBuffer.get(0).getIndex();
+            return entryBuffer.get((int)(entryIndex - startLogIndex));
+        }
+        return null;
     }
 
     /**
@@ -203,10 +227,10 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     public boolean deleteLogEntriesFrom(long logIndex) {
         try {
             //首先查看是否位于 bufferList中
-            if(!bufferList.isEmpty() && logIndex >= bufferList.get(0).getIndex()) {
-                int idx = bufferList.size() - 1;
-                while(bufferList.get(idx).getIndex() >= logIndex) {
-                    bufferList.remove(idx);
+            if(!entryBuffer.isEmpty() && logIndex >= entryBuffer.get(0).getIndex()) {
+                int idx = entryBuffer.size() - 1;
+                while(entryBuffer.get(idx).getIndex() >= logIndex) {
+                    entryBuffer.remove(idx);
                 }
                 lastLogIndex = logIndex - 1;
                 return true;
