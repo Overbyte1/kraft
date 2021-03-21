@@ -21,8 +21,7 @@ public class GeneralEntry extends Entry{
         return commandBytes;
     }
 
-    @Override
-    protected void registerSerializer() {
+    public static void registerSerializer() {
         EntrySerializerHandler.getInstance().register(EntryType.GENERAL, GeneralEntry.class, new GeneralEntrySerializer());
     }
 

@@ -10,7 +10,7 @@ import java.io.RandomAccessFile;
 public class EntryDataFile {
     private RandomAccessFile randomAccessFile;
     private EntryFileMeta entryFileMeta;
-    private static final String openMode = "rw";
+    private static final String openMode = "rws";
     //private static final int indexByteLen = 8;
 
 
@@ -75,6 +75,8 @@ public class EntryDataFile {
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据
         randomAccessFile.write(bytes);
+        System.out.println("do append entry: " + entry);
+        System.out.println("log offset = " + offset + ", file length = " + randomAccessFile.length());
         //写入最后一个entry的index
 //        lastEntryIndex = entry.getIndex();
 //        randomAccessFile.writeLong(lastEntryIndex);

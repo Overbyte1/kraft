@@ -13,7 +13,7 @@ import java.io.RandomAccessFile;
 public class EntryIndexFile {
     private RandomAccessFile randomAccessFile;
     private EntryIndexFileMeta entryIndexFileMeta;
-    private static final String openMode = "rw";
+    private static final String openMode = "rws";
     //记录每个EntryIndexItem的长度，单位为字节
     private static final int ITEM_LENGTH_BYTE = 4;
     //private static final int indexByteLen = 8;
@@ -116,7 +116,7 @@ public class EntryIndexFile {
 
         byte[] bytes = entryIndexSerializer.entryIndexToBytes(entryIndexItem);
         randomAccessFile.seek(randomAccessFile.length());
-        System.out.println(randomAccessFile.length() + " " + entryIndexItem);
+        //System.out.println(randomAccessFile.length() + " " + entryIndexItem);
         //写入entry的空间大小
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据

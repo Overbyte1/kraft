@@ -16,9 +16,6 @@ public abstract class Entry implements Serializable{
         this.term = term;
         this.index = index;
 
-        if(!EntrySerializerHandler.getInstance().isRegistered(this.getClass())) {
-            registerSerializer();
-        }
     }
 
     public int getType() {
@@ -46,7 +43,7 @@ public abstract class Entry implements Serializable{
         this.index = index;
     }
 
-    protected abstract void registerSerializer();
+    //protected abstract void registerSerializer();
 
     public static int getByteLen() {
         return BYTE_LEN;

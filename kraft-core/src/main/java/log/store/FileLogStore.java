@@ -54,7 +54,10 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     }
     private void mkdir(String path) {
         File file = new File(path);
-        file.mkdirs();
+        if(!file.exists()) {
+            logger.debug("create directory: {}", file.getAbsolutePath());
+            file.mkdirs();
+        }
     }
 
     @Override
@@ -78,6 +81,8 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             if(currentGenerationIndex == 0) {
                 return null;
             }
+            logger.debug("entry index {} was not found in current generation, start finding another generation file......", logIndex);
+
             int low = 0, high = currentGenerationIndex - 1, mid;
             //EntryGeneration midGeneration;
             while(low < high) {
@@ -99,7 +104,8 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                     }
                 }
             }
-            //定位到该Entry在哪代文件
+            logger.debug("the entry index {} is in {}th generation", logIndex, low);
+
             try (EntryGeneration generation = generationHandler.getGeneration(low)) {
                 EntryIndexItem targetIndexItem = generation.getEntryIndexFile().getEntryIndexItem(logIndex);
                 if (targetIndexItem != null) {
@@ -107,7 +113,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                 }
             }
         } catch (IOException e) {
-            logger.warn("fail to read log entry, exception message: {}", e.getMessage());
+            logger.warn("fail to read entry, exception message: {}", e.getMessage());
         }
         return null;
     }
@@ -121,7 +127,10 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             EntryIndexItem entryIndexItem = new EntryIndexItem(entry.getType(), entry.getIndex(), entry.getTerm(), fileOffset);
             boolean result = entryIndexFile.appendEntryIndexItem(entryIndexItem);
 
+            //addToBuffer(entry, entryIndexItem);
+
             lastLogIndex++;
+            logger.debug("empty entry {} was appended", entry);
             return result;
         } catch (IOException e) {
             logger.warn("fail to append empty entry to file, cause is: " + e.getMessage());
@@ -145,6 +154,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             }
             //发生冲突，删除后面的日志
             if(entry.getIndex() <= lastLogIndex) {
+                logger.debug("entry conflict, start deleting entry from index {} ......", entry.getIndex());
                 deleteLogEntriesFrom(entry.getIndex());
             }
             //添加到 data 文件
@@ -152,12 +162,13 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             EntryIndexItem entryIndexItem = new EntryIndexItem(entry.getType(), entry.getIndex(), entry.getTerm(),
                     fileOffset);
 
-            lastLogIndex++;
             //添加到 index 文件
             boolean result =  entryIndexFile.appendEntryIndexItem(entryIndexItem);
             if(result) {
+                logger.debug("entry {} was append", entry);
+                lastLogIndex++;
                 //添加到buffer
-                entryBuffer.add(entry);
+                //addToBuffer(entry, entryIndexItem);
                 return true;
             }
             return false;
@@ -169,8 +180,14 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         }
 
     }
-    private void addToBuffer(Entry entry) {
-
+    private void addToBuffer(Entry entry, EntryIndexItem entryIndexItem) {
+        if(entryBuffer.size() > BUFFER_SIZE) {
+            entryBuffer.clear();
+            entryIndexItemBuffer.clear();
+            //TODO:会引起命中率大幅下降，建议渐进式清除
+        }
+        entryBuffer.add(entry);
+        entryIndexItemBuffer.add(entryIndexItem);
     }
     private Entry getEntryFromBuffer(long entryIndex) {
         if(!entryBuffer.isEmpty() && entryIndex >= entryBuffer.get(0).getIndex()) {

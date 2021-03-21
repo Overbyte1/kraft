@@ -1,15 +1,16 @@
-package election.nodeimpl;
+package election.nodeimpl.filelogstore;
 
 import election.config.GlobalConfig;
-import log.Log;
-import log.LogImpl;
-import log.store.LogStore;
-import log.store.MemoryLogStore;
 import election.node.GroupMember;
 import election.node.NodeGroup;
 import election.node.NodeId;
 import election.node.NodeImpl;
 import election.statemachine.StateMachine;
+import log.Log;
+import log.LogImpl;
+import log.store.FileLogStore;
+import log.store.LogStore;
+import log.store.MemoryLogStore;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -26,8 +27,9 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Properties;
 
-public class NodeImplTest2 {
+public class FileLogStoreNodeImplTest1 {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
+    private String path = "./data/node1/";
     private int selfPort;
     private NodeId selfNodeId;
     private ChannelGroup channelGroup;
@@ -41,10 +43,10 @@ public class NodeImplTest2 {
     public void initNodeGroup() throws IOException {
         nodeGroup = new NodeGroup();
 
-        int seq = 3, memberNum = 5;
+        int seq = 2, memberNum = 5;
         String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
         String selfIdName = "self_id", selfPortName = "self_port";
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member3.properties");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member2.properties");
         Properties properties = new Properties();
         properties.load(inputStream);
 
@@ -76,9 +78,9 @@ public class NodeImplTest2 {
 
     }
     @Before
-    public void initOther() {
+    public void initOther() throws IOException {
         channelGroup = new ChannelGroup(selfNodeId);
-        logStore = new MemoryLogStore();
+        logStore = new FileLogStore(path);
         stateMachine = null;
         rpcHandler = new RpcHandlerImpl(channelGroup, selfPort);
         defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
@@ -88,7 +90,7 @@ public class NodeImplTest2 {
     }
     @Test
     public void testLog() {
-        rpcHandler.initialize();
+        //rpcHandler.initialize();
         node.start();
         waiting();
     }

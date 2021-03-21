@@ -1,5 +1,8 @@
 package log.store;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -8,7 +11,9 @@ import java.io.IOException;
  * 所以将这两个文件的创建、删除是一起的，因此将它们合并成一个Generation
  */
 public class EntryGenerationHandler {
-    private String rootPath = "entry";
+    private static final Logger logger = LoggerFactory.getLogger(EntryGenerationHandler.commonPrefix);
+
+    private String rootPath;
     private static final String commonPrefix = "entry_";
     private static final String entryDataFilenameSuffix = ".bin";
     private static final String entryIndexFileNameSuffix = ".idx";
@@ -47,6 +52,8 @@ public class EntryGenerationHandler {
                 new EntryIndexFile(entryIndexFile, preIndex, preTerm));
     }
     private void initGeneration() throws IOException {
+        logger.debug("start initializing generation......");
+
         File file;
         int low = 0, high = MAX_GENERATION, mid;
         String fileName = null;
@@ -59,7 +66,7 @@ public class EntryGenerationHandler {
             fileName = stringBuilder.append(rootPath)
                     .append(commonPrefix)
                     .append(mid)
-                    .append(entryDataFilenameSuffix)
+                    .append(entryIndexFileNameSuffix)
                     .toString();
 
             file = new File(fileName);
@@ -70,6 +77,8 @@ public class EntryGenerationHandler {
             }
         }
         currentGenerationIndex = low;
+        logger.debug("latest generation is: {}", currentGenerationIndex);
+
         String entryDataName = getLatestEntryDataFilename();
         String entryIndexName = getLatestEntryIndexFileName();
         file = new File(entryDataName);
@@ -80,16 +89,6 @@ public class EntryGenerationHandler {
         if(!file.exists()) {
             file.createNewFile();
         }
-//        if(currentGenerationIndex == 0) {
-//            lastGenerationEntryIndex = 0;
-//        } else { //获取上一个Generation的最后一个entryIndex
-//            try (RandomAccessFile randomAccessFile = new RandomAccessFile(entryIndexName, "r")) {
-//
-//                //TODO:change 8
-//                randomAccessFile.seek(randomAccessFile.length() - 8);
-//                lastGenerationEntryIndex = randomAccessFile.readLong();
-//            }
-//        }
     }
 
 
@@ -165,13 +164,11 @@ public class EntryGenerationHandler {
         File entryDataFile = new File(entryDataName);
         File entryIndexFile = new File(entryIndexName);
         if(entryDataFile.delete() && entryIndexFile.delete()) {
+            logger.debug("delete generation: {}", currentGenerationIndex);
             currentGenerationIndex--;
             return true;
         }
         return false;
 
     }
-
-
-
 }

@@ -87,6 +87,7 @@ public class NodeImpl implements Node {
          */
         logger.info("current node is starting......");
         becomeToRole(new FollowerRole(currentNodeId, 0));
+        rpcHandler.initialize();
 //        registerHandler(currentRole);
 //        startElection();
         //scheduleExecutor.schedule(this::electionTimeout, config.getMinElectionTimeout(), TimeUnit.MILLISECONDS);

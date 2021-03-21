@@ -1,4 +1,4 @@
-package election.nodeimpl;
+package election.nodeimpl.memorylogstore;
 
 import election.config.GlobalConfig;
 import log.Log;
@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Properties;
 
-public class NodeImplTest1 {
+public class NodeImplTest2 {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
     private int selfPort;
     private NodeId selfNodeId;
@@ -41,10 +41,10 @@ public class NodeImplTest1 {
     public void initNodeGroup() throws IOException {
         nodeGroup = new NodeGroup();
 
-        int seq = 2, memberNum = 5;
+        int seq = 3, memberNum = 5;
         String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
         String selfIdName = "self_id", selfPortName = "self_port";
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member2.properties");
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member3.properties");
         Properties properties = new Properties();
         properties.load(inputStream);
 

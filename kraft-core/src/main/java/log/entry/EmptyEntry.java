@@ -8,8 +8,7 @@ public class EmptyEntry extends Entry  {
         super(EntryType.Empty, term, index);
     }
 
-    @Override
-    protected void registerSerializer() {
+    public static void registerSerializer() {
         EntrySerializerHandler.getInstance().register(EntryType.Empty, EmptyEntry.class, new EmptyEntrySerializer());
     }
 

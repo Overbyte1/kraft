@@ -1,8 +1,10 @@
 package log.store;
 
 import election.LogIndexOutOfBoundsException;
+import log.entry.EmptyEntry;
 import log.entry.Entry;
 import log.entry.EntryMeta;
+import log.entry.GeneralEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,10 +16,10 @@ public abstract class AbstractLogStore implements LogStore{
 
     protected long lastLogIndex;
 
-//    @Override
-//    public Entry getLogEntry(long logIndex) {
-//        return null;
-//    }
+    public AbstractLogStore() {
+        EmptyEntry.registerSerializer();
+        GeneralEntry.registerSerializer();
+    }
 
     @Override
     public Entry getLastEntry() {
@@ -58,7 +60,7 @@ public abstract class AbstractLogStore implements LogStore{
         int fromIndex = (int)logIndex;
         int endIndex = (int)lastLogIndex;
         List<Entry> list = new ArrayList<>(endIndex - fromIndex + 1);
-        while(fromIndex < endIndex) {
+        while(fromIndex <= endIndex) {
             list.add(getLogEntry(fromIndex));
             fromIndex++;
         }

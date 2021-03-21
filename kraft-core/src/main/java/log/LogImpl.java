@@ -125,7 +125,7 @@ public class LogImpl implements Log {
 
     @Override
     public EmptyEntry appendEmptyEntry(long term) {
-        EmptyEntry entry = new EmptyEntry(term, logStore.getLastLogIndex());
+        EmptyEntry entry = new EmptyEntry(term, logStore.getLastLogIndex() + 1);
         logStore.appendEmptyEntry(entry);
         return entry;
     }
@@ -146,6 +146,7 @@ public class LogImpl implements Log {
     @Override
     public boolean appendGeneralEntriesFromLeader(long preTerm, long preLogIndex, List<Entry> entryList,
                                                   long leaderCommit) {
+        System.out.println("LogImpl.appendGeneralEntriesFromLeader");
         boolean result = logStore.appendEntries(preTerm, preLogIndex, entryList);
         if(result) {
             //更新commitIndex、appliedIndex
@@ -161,6 +162,11 @@ public class LogImpl implements Log {
                         apply(((GeneralEntry)entry).getCommandBytes());
                 }
             }
+        }
+        if(!result) {
+            logger.debug("fail to append entry {} from leader", entryList);
+        } else {
+            logger.debug("succeed to append entry {} from leader", entryList);
         }
         return result;
     }
