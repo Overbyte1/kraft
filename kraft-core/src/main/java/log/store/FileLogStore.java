@@ -55,7 +55,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     private void mkdir(String path) {
         File file = new File(path);
         if(!file.exists()) {
-            logger.debug("create directory: {}", file.getAbsolutePath());
+            logger.debug("directory: [{}] was created", file.getAbsolutePath());
             file.mkdirs();
         }
     }
@@ -165,7 +165,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             //添加到 index 文件
             boolean result =  entryIndexFile.appendEntryIndexItem(entryIndexItem);
             if(result) {
-                logger.debug("entry {} was append", entry);
+                logger.debug("entry {} was appended", entry);
                 lastLogIndex++;
                 //添加到buffer
                 //addToBuffer(entry, entryIndexItem);
@@ -174,7 +174,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             return false;
         } catch (IOException e) {
             //e.printStackTrace();
-            logger.warn("fail to append entry, entry is: {}, preTerm is {}, preLogIndex is {}, cause is: {}",
+            logger.warn("fail to append entry, entry is {}, preTerm is {}, preLogIndex is {}, cause is: {}",
                     entry, preTerm, preLogIndex, e.getMessage());
             return false;
         }
@@ -229,7 +229,9 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
      * @throws IOException
      */
     private void updateFiles() throws IOException {
-        if(entryDataFile.getSize() > maxFileSize) {
+        long size = entryDataFile.getSize();
+        if(size > maxFileSize) {
+            logger.debug("current entry data file length is {} byte, greater than maxsize {}", size, maxFileSize);
             EntryIndexItem entryIndexItem = entryIndexFile.getLastEntryIndexItem();
             EntryGeneration entryGeneration = generationHandler
                     .createEntryGeneration(entryIndexItem.getIndex(), entryIndexItem.getTerm());
@@ -269,6 +271,8 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             boolean res =  entryIndexFile.deleteEntriesFrom(entryIndexItem.getIndex())
                     && entryDataFile.deleteFromOffset(entryIndexItem.getOffset());
             if(res) {
+                logger.debug("delete entries from index {}, latest entry data file is {}, entry index file is {}",
+                        entryIndexItem.getIndex(), entryDataFile.getFilename(), entryIndexFile.getFilename());
                 lastLogIndex = logIndex - 1;
             }
             return res;

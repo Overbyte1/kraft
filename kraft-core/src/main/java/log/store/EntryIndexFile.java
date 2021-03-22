@@ -2,6 +2,8 @@ package log.store;
 
 import log.serialize.EntryIndexSerializer;
 import log.serialize.EntryIndexSerializerImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,6 +13,10 @@ import java.io.RandomAccessFile;
  * Entry文件索引，记录index对应日志的文件偏移值
  */
 public class EntryIndexFile {
+    private static final Logger logger = LoggerFactory.getLogger(EntryIndexFile.class);
+
+    private final String filename;
+
     private RandomAccessFile randomAccessFile;
     private EntryIndexFileMeta entryIndexFileMeta;
     private static final String openMode = "rws";
@@ -24,10 +30,13 @@ public class EntryIndexFile {
     private EntryIndexItem lastEntryIndexItem;
 
     public EntryIndexFile(File file, long startEntryIndex, long termOffset) throws IOException {
+        filename = file.getName();
         init(file, startEntryIndex, termOffset);
 
+        logger.debug("entry index file {} 's last entry index item is {}", filename, lastEntryIndexItem);
     }
     public EntryIndexFile(File file) throws IOException {
+        filename = file.getName();
         randomAccessFile = new RandomAccessFile(file, openMode);
         initEntryIndexFileMeta();
         long fileLen = randomAccessFile.length();
@@ -39,6 +48,8 @@ public class EntryIndexFile {
         //preIndex是上一个文件最后的index，如果当前文件是第0个文件，没有前一个文件了，
         // 此时entryIndexFileMeta.getPreIndex()==0
         lastEntryIndexItem = getEntryIndexItemByFileOffset(fileLen - getEntryIndexItemStoreByte());
+
+        logger.debug("entry index file {} 's last entry index item is {}", filename, lastEntryIndexItem);
     }
 
 
@@ -60,6 +71,8 @@ public class EntryIndexFile {
         if(!isLengthLegal(fileLen)) {
             long lastByte = (fileLen - EntryIndexFileMeta.getLEN()) % getEntryIndexItemStoreByte();
             randomAccessFile.setLength(fileLen - lastByte);
+            logger.debug("entry index file: {}'s length {} is illegal, the system may have crashed. after discarding incomplete data, new file length is {}"
+                    , filename, fileLen, randomAccessFile.length());
         }
     }
 
@@ -86,6 +99,9 @@ public class EntryIndexFile {
             randomAccessFile.writeLong(entryIndexFileMeta.MAGIC);
             randomAccessFile.writeLong(indexOffset);
             randomAccessFile.writeLong(termOffset);
+            logger.debug("entry index file: {}, the file length is less than {}, rewrite meta data:" +
+                    " [magic: {}, index offset: {}, term offset: {}]",
+                    filename, EntryIndexFileMeta.LEN, entryIndexFileMeta.MAGIC, indexOffset, termOffset);
         } else if(fileLen >= EntryIndexFileMeta.LEN){
             initEntryIndexFileMeta();
 
@@ -101,12 +117,16 @@ public class EntryIndexFile {
     private void initEntryIndexFileMeta() throws IOException {
         long magic = randomAccessFile.readLong();
         if(magic != EntryIndexFileMeta.MAGIC) {
+            logger.warn("entry index file: {}, the magic number {} is illegal, it should be {}",
+                    filename, magic, EntryIndexFileMeta.MAGIC);
             throw new FileFormatNotSupportException("magic of file should be: "
                     + EntryFileMeta.MAGIC + ", but found: " + magic);
         }
         long startIndex = randomAccessFile.readLong();
         long startTerm = randomAccessFile.readLong();
         entryIndexFileMeta = new EntryIndexFileMeta(startIndex, startTerm);
+
+        logger.debug("entry index file: {}, index offset is {}, term offset is {}", filename, startIndex, startTerm);
     }
 
     public boolean appendEntryIndexItem(EntryIndexItem entryIndexItem) throws IOException {
@@ -115,7 +135,8 @@ public class EntryIndexFile {
 //        }
 
         byte[] bytes = entryIndexSerializer.entryIndexToBytes(entryIndexItem);
-        randomAccessFile.seek(randomAccessFile.length());
+        long fileOffset = randomAccessFile.length();
+        randomAccessFile.seek(fileOffset);
         //System.out.println(randomAccessFile.length() + " " + entryIndexItem);
         //写入entry的空间大小
         randomAccessFile.writeInt(bytes.length);
@@ -123,6 +144,9 @@ public class EntryIndexFile {
         randomAccessFile.write(bytes);
 
         lastEntryIndexItem = entryIndexItem;
+
+        logger.debug("entry index item {} was write to entry index file {} from file offset: {}",
+                entryIndexItem, filename, fileOffset);
 
         return true;
         //写入最后一个entry的index
@@ -145,7 +169,9 @@ public class EntryIndexFile {
         byte[] bytes = new byte[len];
         randomAccessFile.read(bytes);
 
-        return entryIndexSerializer.bytesToEntryIndexItem(bytes);
+        EntryIndexItem entryIndexItem = entryIndexSerializer.bytesToEntryIndexItem(bytes);
+        logger.debug("entry index item {} was read from file {}, file offset: {}", entryIndexItem, filename, fileOffset);
+        return entryIndexItem;
     }
     public EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
         if(entryIndex - 1 == entryIndexFileMeta.getPreIndex()) {
@@ -166,6 +192,8 @@ public class EntryIndexFile {
         }
         randomAccessFile.seek(fileOffset);
         randomAccessFile.setLength(fileOffset);
+
+        logger.debug("delete entries from entry index {}, file offset is {}", logIndex, fileOffset);
         return true;
     }
 
@@ -183,6 +211,11 @@ public class EntryIndexFile {
         }
         return entryIndexFileMeta.getPreIndex() == preIndex && entryIndexFileMeta.getPreTerm() == preTerm;
     }
+
+    public String getFilename() {
+        return filename;
+    }
+
     public void close() throws IOException {
         randomAccessFile.close();
     }

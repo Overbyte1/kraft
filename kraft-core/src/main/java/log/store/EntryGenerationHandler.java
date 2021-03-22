@@ -11,7 +11,7 @@ import java.io.IOException;
  * 所以将这两个文件的创建、删除是一起的，因此将它们合并成一个Generation
  */
 public class EntryGenerationHandler {
-    private static final Logger logger = LoggerFactory.getLogger(EntryGenerationHandler.commonPrefix);
+    private static final Logger logger = LoggerFactory.getLogger(EntryGenerationHandler.class);
 
     private String rootPath;
     private static final String commonPrefix = "entry_";
@@ -47,6 +47,8 @@ public class EntryGenerationHandler {
         if(!entryIndexFile.exists()) {
             entryIndexFile.createNewFile();
         }
+        logger.debug("new generation was created, entry data file: {}, entry index file: {}",
+                entryDataName, entryIndexName);
 
         return new EntryGeneration(new EntryDataFile(entryDatafile),
                 new EntryIndexFile(entryIndexFile, preIndex, preTerm));
@@ -77,10 +79,11 @@ public class EntryGenerationHandler {
             }
         }
         currentGenerationIndex = low;
-        logger.debug("latest generation is: {}", currentGenerationIndex);
 
         String entryDataName = getLatestEntryDataFilename();
         String entryIndexName = getLatestEntryIndexFileName();
+        logger.debug("latest generation index is: {}, entry data filename: {}, entry index filename: {}",
+                currentGenerationIndex, entryDataName, entryIndexName);
         file = new File(entryDataName);
         if(!file.exists()) {
             file.createNewFile();
@@ -109,6 +112,8 @@ public class EntryGenerationHandler {
         } else {
             entryIndexFile = new EntryIndexFile(new File(entryIndexName));
         }
+        logger.debug("latest generation is {}th generation, entry data filename: {}, entry index filename: {}",
+               currentGenerationIndex ,entryDataName, entryIndexName );
         return new EntryGeneration(entryDataFile, entryIndexFile);
     }
     

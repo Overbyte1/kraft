@@ -2,12 +2,17 @@ package log.store;
 
 import log.entry.Entry;
 import log.serialize.EntrySerializerHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public class EntryDataFile {
+    private static final Logger logger = LoggerFactory.getLogger(EntryDataFile.class);
+
+    private final String filename;
     private RandomAccessFile randomAccessFile;
     private EntryFileMeta entryFileMeta;
     private static final String openMode = "rws";
@@ -21,6 +26,7 @@ public class EntryDataFile {
     public EntryDataFile(File file)
             throws IOException {
 
+        filename = file.getName();
         init(file);
     }
     private void init(File file) throws IOException {
@@ -34,11 +40,17 @@ public class EntryDataFile {
 
             randomAccessFile.writeLong(entryFileMeta.MAGIC);
             randomAccessFile.writeLong(entryFileMeta.getOffset());
+
+            logger.debug("entry index file: {}, the file length is less than {}, rewrite meta data:" +
+                            " [magic: {}, index offset: {}]",
+                    filename, EntryIndexFileMeta.LEN, entryFileMeta.MAGIC, entryFileMeta.getOffset());
             //刚创建时还没有保存entry，当前文件保存entry的index为-1，表示为空
             //randomAccessFile.writeLong(-1);
         } else {
             long magic = randomAccessFile.readLong();
             if(magic != EntryFileMeta.MAGIC) {
+                logger.warn("entry data file: {}, illegal magic number {}, it should be {}",
+                        filename, magic, EntryFileMeta.MAGIC);
                 throw new FileFormatNotSupportException("magic of file should be: "
                         + EntryFileMeta.MAGIC + ", but found: " + magic);
             }
@@ -56,10 +68,6 @@ public class EntryDataFile {
         return randomAccessFile.length();
     }
 
-    //将文件内容刷回磁盘
-    public void flush() {
-
-    }
 
     /**
      * 从尾部写入一个Entry
@@ -75,8 +83,7 @@ public class EntryDataFile {
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据
         randomAccessFile.write(bytes);
-        System.out.println("do append entry: " + entry);
-        System.out.println("log offset = " + offset + ", file length = " + randomAccessFile.length());
+        logger.debug("entry {} was append to entry data file: {}, start file offset: {}", entry, filename, offset);
         //写入最后一个entry的index
 //        lastEntryIndex = entry.getIndex();
 //        randomAccessFile.writeLong(lastEntryIndex);
@@ -97,15 +104,23 @@ public class EntryDataFile {
         int size = randomAccessFile.readInt();
         byte[] bytes = new byte[size];
         randomAccessFile.read(bytes);
-        return entrySerializerHandler.bytesToEntry(bytes);
+        Entry entry = entrySerializerHandler.bytesToEntry(bytes);
+        logger.debug("entry {} was read from file {}, file offset: {}", entry, filename, offset);
+        return entry;
     }
     public boolean deleteFromOffset(long offset) throws IOException {
         if(offset >= randomAccessFile.length()) {
             return false;
         }
         randomAccessFile.setLength(offset);
+        logger.debug("delete entries from file offset {}, entry data file is {}", offset, filename);
         return true;
     }
+
+    public String getFilename() {
+        return filename;
+    }
+
     public void close() throws IOException {
         randomAccessFile.close();
     }
