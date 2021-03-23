@@ -30,10 +30,13 @@ public class NodeGroup {
             member.resetReplicationState(lastLogIndex);
         }
     }
-    //判断matchIndex是否过半
+    /**
+     * 判断索引为index的日志是否已经被过半复制
+     */
     public boolean isMajorMatchIndex(long index) {
         ReplicationState replicationState = null;
-        int majorNum = (nodesMap.size() + 1) / 2;
+        //nodesMap保存了其他节点的复制状态，除去当前Leader节点，只需要nodesMap.size()/2的节点符合条件matchIndex >= index即可
+        int majorNum = nodesMap.size() / 2;
         for (GroupMember member : nodesMap.values()) {
             replicationState = member.getReplicationState();
             if(replicationState.getMatchIndex() >= index) {

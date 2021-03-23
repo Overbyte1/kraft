@@ -56,6 +56,8 @@ public class LogImpl implements Log {
             //apply(logStore.getLogEntry(idx));
             return true;
         }
+        logger.debug("current commit index is: {}", commitIndex);
+        //TODO:非首次启动，commitIndex的维护
         return false;
     }
 
@@ -76,7 +78,8 @@ public class LogImpl implements Log {
     /**
      * Raft 通过比较两份日志中最后一条日志条目的索引值和任期号定义谁的日志比较新：
      * 1. 如果两份日志最后的条目的任期号不同，那么任期号大的日志更加新。
-     * 2. 如果两份日志最后的条目任期号相同，那么日志比较长的那个就更加新。
+     * 2. 如果两份日志最后的条目任期号相同，那么日志索引大的那个就更加新。
+     * 3. 如果日志最大索引也相同，就认为远端节点的日志更加新。
      * @param lastTerm
      * @param lastLogIndex
      * @return
@@ -120,7 +123,7 @@ public class LogImpl implements Log {
             lastLogTerm = entryMata.getTerm();
         }
 
-        return new RequestVoteMessage(term, candidateId, lastLogTerm, lastLogIndex);
+        return new RequestVoteMessage(term, candidateId, lastLogIndex,  lastLogTerm);
     }
 
     @Override
@@ -138,7 +141,7 @@ public class LogImpl implements Log {
      */
     @Override
     public boolean appendGeneralEntry(long term, byte[] command) {
-        GeneralEntry entry = new GeneralEntry(term, command);
+        GeneralEntry entry = new GeneralEntry(term, logStore.getLastLogIndex() + 1, command);
         logStore.appendEmptyEntry(entry);
         return true;
     }
@@ -146,7 +149,6 @@ public class LogImpl implements Log {
     @Override
     public boolean appendGeneralEntriesFromLeader(long preTerm, long preLogIndex, List<Entry> entryList,
                                                   long leaderCommit) {
-        System.out.println("LogImpl.appendGeneralEntriesFromLeader");
         boolean result = logStore.appendEntries(preTerm, preLogIndex, entryList);
         if(result) {
             //更新commitIndex、appliedIndex
@@ -174,7 +176,7 @@ public class LogImpl implements Log {
 
     @Override
     public void apply(byte[] command) {
-
+        logger.debug("apply command");
     }
 
     @Override

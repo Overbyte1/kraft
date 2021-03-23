@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Properties;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 
 public class FileLogStoreNodeImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
@@ -94,6 +94,10 @@ public class FileLogStoreNodeImplTest {
     public void testLog() {
         //rpcHandler.initialize();
         node.start();
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(()-> {
+            node.apply(new byte[]{0, 1, 2, 3, 4});
+        }, 0, 5, TimeUnit.SECONDS);
         waiting();
     }
     private void waiting() {

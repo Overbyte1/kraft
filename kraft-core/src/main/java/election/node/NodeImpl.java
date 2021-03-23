@@ -101,7 +101,13 @@ public class NodeImpl implements Node {
 
     @Override
     public boolean apply(byte[] command) {
-//        log.appendGeneralEntry(currentRole.getCurrentTerm(), command);
+        if(currentRole instanceof LeaderRole) {
+            taskExecutor.submit(
+                    () -> {
+                        log.appendGeneralEntry(currentRole.getCurrentTerm(), command);
+                    }
+            );
+        }
         return false;
     }
 

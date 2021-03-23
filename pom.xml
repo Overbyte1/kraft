@@ -10,9 +10,18 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>kraft-core</module>
+        <module>kraft-kvstore</module>
     </modules>
 
-
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.1.45.Final</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
 
 </project>

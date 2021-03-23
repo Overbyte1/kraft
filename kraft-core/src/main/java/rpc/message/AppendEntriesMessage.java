@@ -116,6 +116,7 @@ public class AppendEntriesMessage implements Serializable {
                 ", leaderId=" + leaderId +
                 ", preLogTerm=" + preLogTerm +
                 ", preLogIndex=" + preLogIndex +
+                ", leaderCommit=" + leaderCommit +
                 ", entryList=" + entryList +
                 '}';
     }
