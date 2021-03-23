@@ -18,6 +18,6 @@ public class EmptyEntrySerializer extends AbstractSerializableEntry {
         offset += Long.BYTES;
         long term = ByteArrayConverter.readLong(bytes, offset);
 
-        return new EmptyEntry(index, term);
+        return new EmptyEntry(term, index);
     }
 }
