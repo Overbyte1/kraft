@@ -73,7 +73,7 @@ public class DefaultLog {
         this.stateMachine = stateMachine;
     }
     public void apply() {
-        logger.info("apply() was called");
+        logger.info("appendLog() was called");
     }
 
     public boolean appendEntries(long preTerm, long preLogIndex, long logIndex, List<Entry> entryList) {

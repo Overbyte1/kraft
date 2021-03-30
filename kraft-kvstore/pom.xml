@@ -17,6 +17,11 @@
             <artifactId>netty-all</artifactId>
             <version>4.1.45.Final</version>
         </dependency>
+        <dependency>
+            <groupId>cn.overbyte</groupId>
+            <artifactId>kraft-core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 </project>

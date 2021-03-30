@@ -10,7 +10,6 @@ import log.Log;
 import log.LogImpl;
 import log.store.FileLogStore;
 import log.store.LogStore;
-import log.store.MemoryLogStore;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -96,7 +95,7 @@ public class FileLogStoreNodeImplTest {
         node.start();
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.scheduleAtFixedRate(()-> {
-            node.apply(new byte[]{0, 1, 2, 3, 4});
+            node.appendLog(new byte[]{0, 1, 2, 3, 4});
         }, 0, 5, TimeUnit.SECONDS);
         waiting();
     }

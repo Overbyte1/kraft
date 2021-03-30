@@ -6,12 +6,9 @@ import election.handler.AbstractMessageHandler;
 import election.handler.MessageHandler;
 import election.handler.RequestHandler;
 import election.handler.ResponseHandler;
+import election.role.*;
 import log.Log;
 import log.entry.Entry;
-import election.role.AbstractRole;
-import election.role.CandidateRole;
-import election.role.FollowerRole;
-import election.role.LeaderRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.NodeEndpoint;
@@ -22,6 +19,8 @@ import rpc.message.*;
 import schedule.*;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class NodeImpl implements Node {
     private static final Logger logger = LoggerFactory.getLogger(NodeImpl.class);
@@ -100,7 +99,7 @@ public class NodeImpl implements Node {
     }
 
     @Override
-    public boolean apply(byte[] command) {
+    public boolean appendLog(byte[] command) {
         if(currentRole instanceof LeaderRole) {
             taskExecutor.submit(
                     () -> {
@@ -109,6 +108,36 @@ public class NodeImpl implements Node {
             );
         }
         return false;
+    }
+
+    /**
+     * currentRole使用volatile保证可见性
+     * @return
+     */
+    @Override
+    public boolean isLeader() {
+        return currentRole instanceof LeaderRole;
+    }
+
+    @Override
+    public NodeEndpoint getLeaderNodeEndpoint() {
+        Future<NodeEndpoint> future = taskExecutor.submit(
+                () -> {
+                    NodeId voteFor = currentRole.getVoteFor();
+                    if (voteFor != null) {
+                        return nodeGroup.getGroupMember(voteFor).getNodeEndpoint();
+                    }
+                    return null;
+                }
+        );
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void becomeToRole(AbstractRole targetRole) {

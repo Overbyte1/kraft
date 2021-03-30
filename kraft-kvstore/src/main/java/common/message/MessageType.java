@@ -1,4 +1,4 @@
 package common.message;
 
-public class Redirect {
+public class MessageType {
 }

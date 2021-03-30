@@ -53,7 +53,7 @@ public class LogImpl implements Log {
             long oldCommitIndex = commitIndex;
             commitIndex++;
             logger.debug("advance commit index to {} from {}", commitIndex, oldCommitIndex);
-            //apply(logStore.getLogEntry(idx));
+            //appendLog(logStore.getLogEntry(idx));
             return true;
         }
         logger.debug("current commit index is: {}", commitIndex);
@@ -176,7 +176,7 @@ public class LogImpl implements Log {
 
     @Override
     public void apply(byte[] command) {
-        logger.debug("apply command");
+        logger.debug("appendLog command");
     }
 
     @Override

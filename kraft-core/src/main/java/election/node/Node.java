@@ -1,7 +1,11 @@
 package election.node;
 
+import rpc.NodeEndpoint;
+
 public interface Node {
     void start();
     void stop();
-    boolean apply(byte[] command);
+    boolean appendLog(byte[] command);
+    boolean isLeader();
+    NodeEndpoint getLeaderNodeEndpoint();
 }
