@@ -1,12 +1,12 @@
 package common.message;
 
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.Channel;
 
 public class Connection<T> {
     private T command;
-    private NioSocketChannel channel;
+    private Channel channel;
 
-    public Connection(T command, NioSocketChannel channel) {
+    public Connection(T command, Channel channel) {
         this.command = command;
         this.channel = channel;
     }

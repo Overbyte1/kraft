@@ -1,10 +1,13 @@
 package common.message;
 
-public class Failure {
+public enum  Failure {
+    TIMEOUT(100, "执行超时"),
+    NO_LEADER(200, "Leader节点尚未选举出");
+
     private int code;
     private String errorMessage;
 
-    public Failure(int code, String errorMessage) {
+    private Failure(int code, String errorMessage) {
         this.code = code;
         this.errorMessage = errorMessage;
     }

@@ -10,4 +10,16 @@ public abstract class KVCommand {
         this.operationType = operationType;
         this.key = key;
     }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public int getOperationType() {
+        return operationType;
+    }
+
+    public String getKey() {
+        return key;
+    }
 }

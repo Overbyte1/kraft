@@ -6,4 +6,8 @@ public class SetCommand extends KVCommand {
         super(requestId, OperationType.KV_SET, key);
         this.value = value;
     }
+
+    public byte[] getValue() {
+        return value;
+    }
 }
