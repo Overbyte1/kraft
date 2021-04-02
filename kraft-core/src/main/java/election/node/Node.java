@@ -1,5 +1,6 @@
 package election.node;
 
+import election.statemachine.StateMachine;
 import rpc.NodeEndpoint;
 
 public interface Node {
@@ -8,4 +9,5 @@ public interface Node {
     boolean appendLog(byte[] command);
     boolean isLeader();
     NodeEndpoint getLeaderNodeEndpoint();
+    void registerStateMachine(StateMachine stateMachine);
 }

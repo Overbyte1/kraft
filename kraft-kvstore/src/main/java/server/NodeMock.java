@@ -1,9 +1,11 @@
 package server;
 
 import election.node.Node;
+import election.statemachine.StateMachine;
 import rpc.NodeEndpoint;
 
 public class NodeMock implements Node {
+    private StateMachine stateMachine;
     @Override
     public void start() {
         System.out.println("node start");
@@ -16,16 +18,23 @@ public class NodeMock implements Node {
 
     @Override
     public boolean appendLog(byte[] command) {
-        return false;
+        System.out.println("appendLog: " + command);
+        stateMachine.apply(command);
+        return true;
     }
 
     @Override
     public boolean isLeader() {
-        return false;
+        return true;
     }
 
     @Override
     public NodeEndpoint getLeaderNodeEndpoint() {
         return null;
+    }
+
+    @Override
+    public void registerStateMachine(StateMachine stateMachine) {
+        this.stateMachine = stateMachine;
     }
 }

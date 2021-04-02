@@ -7,6 +7,7 @@ import election.handler.MessageHandler;
 import election.handler.RequestHandler;
 import election.handler.ResponseHandler;
 import election.role.*;
+import election.statemachine.StateMachine;
 import log.Log;
 import log.entry.Entry;
 import org.slf4j.Logger;
@@ -138,6 +139,11 @@ public class NodeImpl implements Node {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public void registerStateMachine(StateMachine stateMachine) {
+        log.registerStateMachine(stateMachine);
     }
 
     private void becomeToRole(AbstractRole targetRole) {
