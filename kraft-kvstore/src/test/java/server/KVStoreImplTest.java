@@ -6,6 +6,7 @@ import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.*;
 import election.node.Node;
+import election.node.NodeId;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -15,13 +16,15 @@ import io.netty.handler.logging.LoggingHandler;
 import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
+import rpc.Endpoint;
+import rpc.NodeEndpoint;
 
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 
 public class KVStoreImplTest  {
-    private Node node;
+    private NodeMock node;
     private KVStore kvStore;
     private Channel channel;
     private TestHandle testHandle = new TestHandle();
@@ -55,12 +58,7 @@ public class KVStoreImplTest  {
             e.printStackTrace();
         }
     }
-    @Test
-    public void testKvStore() throws InterruptedException {
-    }
-    @Test
-    public void testStart() {
-    }
+
 
     @Test
     public void testHandleGetCommand() throws InterruptedException {
@@ -115,6 +113,23 @@ public class KVStoreImplTest  {
         response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, null));
         assertEquals(response, receiveMessage);
         Thread.sleep(3000);
+    }
+    @Test
+    public void testRedirect() throws InterruptedException {
+        node.setLeader(false);
+        NodeEndpoint nodeEndpoint = new NodeEndpoint(new NodeId("A"), new Endpoint("localhost", 8848));
+        node.setNodeEndpoint(nodeEndpoint);
+
+        RedirectResult result = new RedirectResult(nodeEndpoint);
+
+        GetCommand command = new GetCommand(UUID.randomUUID().toString(), "kk");
+        channel.writeAndFlush(command);
+        Thread.sleep(1000);
+        Object receiveMessage = testHandle.getReceiveMessage();
+        assertEquals(true, receiveMessage instanceof Response);
+        assertEquals(true, ((Response)receiveMessage).getBody() instanceof RedirectResult);
+        RedirectResult redirectResult =  (RedirectResult) ((Response)receiveMessage).getBody();
+        assertEquals(result, redirectResult);
     }
 }
 class TestHandle extends ChannelInboundHandlerAdapter {

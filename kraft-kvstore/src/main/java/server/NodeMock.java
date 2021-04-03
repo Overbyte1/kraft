@@ -6,6 +6,8 @@ import rpc.NodeEndpoint;
 
 public class NodeMock implements Node {
     private StateMachine stateMachine;
+    private NodeEndpoint nodeEndpoint;
+    private boolean leader = true;
     @Override
     public void start() {
         System.out.println("node start");
@@ -25,16 +27,36 @@ public class NodeMock implements Node {
 
     @Override
     public boolean isLeader() {
-        return true;
+        return leader;
     }
 
     @Override
     public NodeEndpoint getLeaderNodeEndpoint() {
-        return null;
+        return nodeEndpoint;
     }
 
     @Override
     public void registerStateMachine(StateMachine stateMachine) {
         this.stateMachine = stateMachine;
+    }
+
+    public StateMachine getStateMachine() {
+        return stateMachine;
+    }
+
+    public void setStateMachine(StateMachine stateMachine) {
+        this.stateMachine = stateMachine;
+    }
+
+    public void setLeader(boolean leader) {
+        this.leader = leader;
+    }
+
+    public NodeEndpoint getNodeEndpoint() {
+        return nodeEndpoint;
+    }
+
+    public void setNodeEndpoint(NodeEndpoint nodeEndpoint) {
+        this.nodeEndpoint = nodeEndpoint;
     }
 }

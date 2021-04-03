@@ -1,6 +1,8 @@
 package rpc;
 
-public class Endpoint {
+import java.io.Serializable;
+
+public class Endpoint implements Serializable {
     private final String ipAddress;
     private final int port;
 
@@ -28,5 +30,23 @@ public class Endpoint {
                 "ipAddress='" + ipAddress + '\'' +
                 ", port=" + port +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Endpoint endpoint = (Endpoint) o;
+
+        if (port != endpoint.port) return false;
+        return ipAddress != null ? ipAddress.equals(endpoint.ipAddress) : endpoint.ipAddress == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = ipAddress != null ? ipAddress.hashCode() : 0;
+        result = 31 * result + port;
+        return result;
     }
 }
