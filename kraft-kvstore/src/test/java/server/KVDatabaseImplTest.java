@@ -5,7 +5,9 @@ import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.*;
-import election.node.Node;
+import common.message.command.DelCommand;
+import common.message.command.GetCommand;
+import common.message.command.SetCommand;
 import election.node.NodeId;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -13,26 +15,29 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import junit.framework.TestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
+import server.store.MemHTKVStore;
 
-import java.util.UUID;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 
 import static org.junit.Assert.assertEquals;
 
-public class KVStoreImplTest  {
+public class KVDatabaseImplTest {
     private NodeMock node;
-    private KVStore kvStore;
+    private KVDatabase kvDatabase;
     private Channel channel;
-    private TestHandle testHandle = new TestHandle();
+    private CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
+    private TestHandle testHandle = new TestHandle(cyclicBarrier);
     @Before
     public void init() {
         node = new NodeMock();
-        kvStore = new KVStoreImpl(node);
-        kvStore.start();
+        kvDatabase = new KVDatabaseImpl(node, new MemHTKVStore());
+        kvDatabase.start();
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
@@ -58,86 +63,106 @@ public class KVStoreImplTest  {
             e.printStackTrace();
         }
     }
+    @After
+    public void destroy() throws InterruptedException {
+        channel.close().sync();
+    }
 
 
     @Test
-    public void testHandleGetCommand() throws InterruptedException {
+    public void testHandleGetCommand() throws InterruptedException, BrokenBarrierException {
 
-        GetCommand command = new GetCommand(UUID.randomUUID().toString(), "kk");
+        GetCommand command = new GetCommand("kk");
         channel.writeAndFlush(command);
-        Thread.sleep(1000);
+        cyclicBarrier.await();
         Object receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         Response<GeneralResult> response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, null));
         assertEquals(response, receiveMessage);
-        Thread.sleep(10000);
+
+        cyclicBarrier.reset();
     }
     @Test
-    public void testHandleSetCommand() throws InterruptedException {
+    public void testHandleSetCommand() throws InterruptedException, BrokenBarrierException {
         String key = "kk", value = "xx";
-        SetCommand command = new SetCommand(UUID.randomUUID().toString(), key, value.getBytes());
+        SetCommand command = new SetCommand(key, value.getBytes());
         channel.writeAndFlush(command);
-        Thread.sleep(1000);
+        cyclicBarrier.await();
         Object receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         Response<GeneralResult> response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, null));
         assertEquals(response, receiveMessage);
 
-        GetCommand getCommand = new GetCommand(UUID.randomUUID().toString(), "kk");
+        GetCommand getCommand = new GetCommand( "kk");
         channel.writeAndFlush(getCommand);
-        Thread.sleep(1000);
+        cyclicBarrier.await();
         receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, value.getBytes()));
         assertEquals(response, receiveMessage);
-        Thread.sleep(3000);
+
+
+        cyclicBarrier.reset();
     }
 
     @Test
-    public void testHandleDelCommand() throws InterruptedException {
+    public void testHandleDelCommand() throws InterruptedException, BrokenBarrierException {
         testHandleSetCommand();
         String key = "kk", value = "xx";
-        DelCommand delCommand = new DelCommand(UUID.randomUUID().toString(), key);
+        DelCommand delCommand = new DelCommand(key);
         channel.writeAndFlush(delCommand);
-        Thread.sleep(1000);
+
+        cyclicBarrier.await();
+
         Object receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         Response<GeneralResult> response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, null));
         assertEquals(response, receiveMessage);
 
-        GetCommand getCommand = new GetCommand(UUID.randomUUID().toString(), "kk");
+        GetCommand getCommand = new GetCommand("kk");
         channel.writeAndFlush(getCommand);
-        Thread.sleep(1000);
+        cyclicBarrier.await();
+
         receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         response = new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, null));
         assertEquals(response, receiveMessage);
-        Thread.sleep(3000);
+
+        cyclicBarrier.reset();
     }
     @Test
-    public void testRedirect() throws InterruptedException {
+    public void testRedirect() throws InterruptedException, BrokenBarrierException {
         node.setLeader(false);
         NodeEndpoint nodeEndpoint = new NodeEndpoint(new NodeId("A"), new Endpoint("localhost", 8848));
         node.setNodeEndpoint(nodeEndpoint);
 
         RedirectResult result = new RedirectResult(nodeEndpoint);
 
-        GetCommand command = new GetCommand(UUID.randomUUID().toString(), "kk");
+        GetCommand command = new GetCommand("kk");
         channel.writeAndFlush(command);
-        Thread.sleep(1000);
+        cyclicBarrier.await();
         Object receiveMessage = testHandle.getReceiveMessage();
         assertEquals(true, receiveMessage instanceof Response);
         assertEquals(true, ((Response)receiveMessage).getBody() instanceof RedirectResult);
         RedirectResult redirectResult =  (RedirectResult) ((Response)receiveMessage).getBody();
         assertEquals(result, redirectResult);
+
+        cyclicBarrier.reset();
     }
 }
 class TestHandle extends ChannelInboundHandlerAdapter {
     private Object receiveMessage;
+    private CyclicBarrier cyclicBarrier;
+
+    public TestHandle(CyclicBarrier cyclicBarrier) {
+        this.cyclicBarrier = cyclicBarrier;
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         System.out.println("client receive message: " + msg);
         receiveMessage = msg;
+        cyclicBarrier.await();
         super.channelRead(ctx, msg);
     }
 

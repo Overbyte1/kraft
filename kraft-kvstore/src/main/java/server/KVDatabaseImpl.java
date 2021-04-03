@@ -5,6 +5,9 @@ import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.*;
+import common.message.command.DelCommand;
+import common.message.command.GetCommand;
+import common.message.command.SetCommand;
 import election.node.Node;
 import election.statemachine.StateMachine;
 import io.netty.bootstrap.ServerBootstrap;
@@ -18,6 +21,7 @@ import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.NodeEndpoint;
+import server.store.KVStore;
 import utils.SerializationUtil;
 
 import java.io.IOException;
@@ -25,8 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class KVStoreImpl implements KVStore {
-    private static final Logger logger = LoggerFactory.getLogger(KVStoreImpl.class);
+public class KVDatabaseImpl implements KVDatabase {
+    private static final Logger logger = LoggerFactory.getLogger(KVDatabaseImpl.class);
     /*
     Node需要提供的接口：
     1. 判断当前节点是否为Leader，决定是否要重定向到Leader
@@ -34,19 +38,24 @@ public class KVStoreImpl implements KVStore {
 
      */
     private Node node;
-    private Map<String, byte[]> storeMap = new HashMap<>();
+    //private Map<String, byte[]> kvStore = new HashMap<>();
     private Map<String, Connection> connectorMap = new ConcurrentHashMap<>();
     private StateMachine stateMachine = new DefaultStateMachine();
+
+    private KVStore kvStore;
+
     //TODO：配置
     private final int port = 8848;
 
-    public KVStoreImpl(Node node) {
+    public KVDatabaseImpl(Node node, KVStore kvStore) {
         this.node = node;
+        this.kvStore = kvStore;
         node.registerStateMachine(stateMachine);
     }
+
     @Override
     public void start() {
-        KVStoreImpl kvStore = this;
+        KVDatabaseImpl kvStore = this;
         node.start();
         NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -76,6 +85,11 @@ public class KVStoreImpl implements KVStore {
         logger.debug("server started");
     }
 
+    @Override
+    public void stop() {
+
+    }
+
     private void redirectOrFail(Connection connection) {
         NodeEndpoint leaderNodeEndpoint = node.getLeaderNodeEndpoint();
         if(leaderNodeEndpoint != null) {
@@ -97,7 +111,7 @@ public class KVStoreImpl implements KVStore {
             redirectOrFail(connection);
             return;
         }
-        byte[] bytes = storeMap.get(connection.getCommand().getKey());
+        byte[] bytes = kvStore.get(connection.getCommand().getKey());
         logger.debug("Get operation: {}/{}", connection.getCommand().getKey(), bytes);
         connection.reply(new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, bytes)));
     }
@@ -126,7 +140,7 @@ public class KVStoreImpl implements KVStore {
         //TODO：remove掉，处理内存泄漏问题
         connectorMap.put(command.getRequestId(), connection);
         String key = command.getKey();
-        if(!storeMap.containsKey(key)) {
+        if(!kvStore.containsKey(key)) {
             connection.reply(new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_NO_CONTENT)));
         } else {
             logger.debug("delete key: [{}] to log", key);
@@ -135,14 +149,14 @@ public class KVStoreImpl implements KVStore {
     }
 
     private void doSet(SetCommand setCommand) {
-        storeMap.put(setCommand.getKey(), setCommand.getValue());
+        kvStore.set(setCommand.getKey(), setCommand.getValue());
         logger.debug("key/value [{}/{}] was set", setCommand.getKey(), new String(setCommand.getValue()));
         connectorMap.get(setCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
                 new GeneralResult(StatusCode.SUCCEED_OK)));
         connectorMap.remove(setCommand.getRequestId());
     }
     private void doDel(DelCommand delCommand) {
-        storeMap.remove(delCommand.getKey());
+        kvStore.del(delCommand.getKey());
         logger.debug("key [{}] was deleted", delCommand.getKey());
         connectorMap.get(delCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
                 new GeneralResult(StatusCode.SUCCEED_OK)));
