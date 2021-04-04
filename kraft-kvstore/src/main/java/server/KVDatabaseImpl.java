@@ -5,9 +5,7 @@ import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.*;
-import common.message.command.DelCommand;
-import common.message.command.GetCommand;
-import common.message.command.SetCommand;
+import common.message.command.*;
 import election.node.Node;
 import election.statemachine.StateMachine;
 import io.netty.bootstrap.ServerBootstrap;
@@ -21,6 +19,7 @@ import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.NodeEndpoint;
+import server.handler.CommandHandler;
 import server.store.KVStore;
 import utils.SerializationUtil;
 
@@ -55,6 +54,7 @@ public class KVDatabaseImpl implements KVDatabase {
 
     @Override
     public void start() {
+
         KVDatabaseImpl kvStore = this;
         node.start();
         NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -91,6 +91,7 @@ public class KVDatabaseImpl implements KVDatabase {
     }
 
     private void redirectOrFail(Connection connection) {
+        //TODO:添加选项，决定是否能够在Follower节点读数据
         NodeEndpoint leaderNodeEndpoint = node.getLeaderNodeEndpoint();
         if(leaderNodeEndpoint != null) {
             connection.reply(new Response(ResponseType.REDIRECT, new RedirectResult(leaderNodeEndpoint)));
@@ -162,8 +163,25 @@ public class KVDatabaseImpl implements KVDatabase {
                 new GeneralResult(StatusCode.SUCCEED_OK)));
         connectorMap.remove(delCommand.getRequestId());
     }
+    private void doMGet(MGetCommand mGetCommand) {
+
+    }
+    private void doMSet(MSetCommand mSetCommand) {
+
+    }
+    private void doMDel(MDelCommand mDelCommand) {
+
+    }
 
     private class DefaultStateMachine implements StateMachine {
+        private Map<Class, CommandHandler> handlerMap = new HashMap<>();
+
+        public void register(Class<?> clazz, CommandHandler handler) {
+            handlerMap.put(clazz, handler);
+        }
+        public void unregister(Class<?> clazz, CommandHandler handler) {
+            handlerMap.put(clazz, handler);
+        }
         @Override
         public boolean apply(byte[] command) {
             Object obj = null;
@@ -173,16 +191,19 @@ public class KVDatabaseImpl implements KVDatabase {
                 logger.debug("fail to decode bytes: {}", e.getMessage());
                 return false;
             }
-            String requestId = null;
-            if(obj instanceof SetCommand) {
-                SetCommand setCommand = (SetCommand) obj;
-                doSet(setCommand);
-                requestId = setCommand.getRequestId();
-            } else if(obj instanceof DelCommand) {
-                DelCommand delCommand = (DelCommand)obj;
-                doDel(delCommand);
-                requestId = delCommand.getRequestId();
-            }
+            ModifiedCommand modifiedCommand = (ModifiedCommand) obj;
+            String requestId = modifiedCommand.getRequestId();
+            Response response = handlerMap.get(modifiedCommand.getClass()).handle(modifiedCommand);
+            connectorMap.get(requestId).reply(response);
+//            if(obj instanceof SetCommand) {
+//                SetCommand setCommand = (SetCommand) obj;
+//                doSet(setCommand);
+//                requestId = setCommand.getRequestId();
+//            } else if(obj instanceof DelCommand) {
+//                DelCommand delCommand = (DelCommand)obj;
+//                doDel(delCommand);
+//                requestId = delCommand.getRequestId();
+//            }
             return true;
         }
 
