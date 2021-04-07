@@ -1,14 +1,15 @@
-package common.message;
+package common.message.response;
 
-public enum  Failure {
+public enum FailureResult {
     TIMEOUT(100, "执行超时"),
     NO_LEADER(101, "Leader节点尚未选举出"),
-    NOT_SUPPORT_OPERATION(102, "不支持该操作");
+    NOT_SUPPORT_OPERATION(102, "不支持该操作"),
+    SERVER_INTERVAL_ERROR(103, "服务器内部错误");
 
     private int code;
     private String errorMessage;
 
-    private Failure(int code, String errorMessage) {
+    private FailureResult(int code, String errorMessage) {
         this.code = code;
         this.errorMessage = errorMessage;
     }

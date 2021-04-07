@@ -1,4 +1,4 @@
-package common.message;
+package common.message.response;
 
 import java.io.Serializable;
 

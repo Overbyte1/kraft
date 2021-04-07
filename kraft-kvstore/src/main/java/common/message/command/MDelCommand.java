@@ -1,27 +1,23 @@
 package common.message.command;
 
 import java.io.Serializable;
-import java.util.Objects;
+import java.util.Arrays;
 
 public class MDelCommand extends ModifiedCommand implements Serializable {
-    private String key;
+    private String[] key;
 
-    public MDelCommand(String key) {
+    public MDelCommand(String[] key) {
         this.key = key;
     }
 
-    public String getKey() {
+    public String[] getKey() {
         return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("MDelCommand{");
-        sb.append("key='").append(key).append('\'');
+        sb.append("key=").append(key == null ? "null" : Arrays.asList(key).toString());
         sb.append(", requestId='").append(requestId).append('\'');
         sb.append('}');
         return sb.toString();
@@ -33,11 +29,13 @@ public class MDelCommand extends ModifiedCommand implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         MDelCommand that = (MDelCommand) o;
-        return Objects.equals(key, that.key);
+        return Arrays.equals(key, that.key);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), key);
+        int result = super.hashCode();
+        result = 31 * result + Arrays.hashCode(key);
+        return result;
     }
 }

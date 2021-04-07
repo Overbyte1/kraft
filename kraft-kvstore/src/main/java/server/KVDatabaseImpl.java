@@ -6,6 +6,7 @@ import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.*;
 import common.message.command.*;
+import common.message.response.*;
 import election.node.Node;
 import election.statemachine.StateMachine;
 import io.netty.bootstrap.ServerBootstrap;
@@ -23,7 +24,6 @@ import server.handler.CommandHandler;
 import server.store.KVStore;
 import utils.SerializationUtil;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +40,7 @@ public class KVDatabaseImpl implements KVDatabase {
     //private Map<String, byte[]> kvStore = new HashMap<>();
     private Map<String, Connection> connectorMap = new ConcurrentHashMap<>();
     private StateMachine stateMachine = new DefaultStateMachine();
+    private Map<Class, CommandHandler> handlerMap = new HashMap<>();
 
     private KVStore kvStore;
 
@@ -97,91 +98,53 @@ public class KVDatabaseImpl implements KVDatabase {
             connection.reply(new Response(ResponseType.REDIRECT, new RedirectResult(leaderNodeEndpoint)));
         } else {
             //Leader不存在
-            connection.reply(new Response(ResponseType.FAILURE, Failure.NO_LEADER));
+            connection.reply(new Response(ResponseType.FAILURE, FailureResult.NO_LEADER));
         }
     }
 
-    //处理get命令
+
     @Override
-    public void handleGetCommand(Connection<GetCommand> connection) {
-        /*
-        1. 判断当前节点是否是Leader，如果是则从Map中获取数据返回，否则
-        2. 获取Leader的地址信息返回重定向消息，如果不存在Leader则返回错误
-         */
+    public void handleCommand(Connection connection) {
         if(!node.isLeader()) {
             redirectOrFail(connection);
             return;
         }
-        byte[] bytes = kvStore.get(connection.getCommand().getKey());
-        logger.debug("Get operation: {}/{}", connection.getCommand().getKey(), bytes);
-        connection.reply(new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_OK, bytes)));
+        Object command = connection.getCommand();
+        if(command instanceof ModifiedCommand) {
+            connectorMap.put(((ModifiedCommand) command).getRequestId(), connection);
+        }
+        Response response = handlerMap.get(command.getClass()).handleCommand(command);
+        if(response != null) {
+            connection.reply(response);
+        }
     }
 
-    //处理set命令
     @Override
-    public void handleSetCommand(Connection<SetCommand> connection) throws IOException {
-        if(!node.isLeader()) {
-            redirectOrFail(connection);
-            return;
-        }
-        SetCommand command = connection.getCommand();
-        connectorMap.put(command.getRequestId(), connection);
-        logger.debug("append key/value: [{}/{}] to log", command.getKey(), new String(command.getValue()));
-        node.appendLog(SerializationUtil.encodes(command));
+    public void registerCommandHandler(Class<?> clazz, CommandHandler handler) {
+        handlerMap.put(clazz, handler);
     }
 
-    //处理del命令
     @Override
-    public void handleDelCommand(Connection<DelCommand> connection) throws IOException {
-        if(!node.isLeader()) {
-            redirectOrFail(connection);
-            return;
-        }
-        DelCommand command = connection.getCommand();
-        //TODO：remove掉，处理内存泄漏问题
-        connectorMap.put(command.getRequestId(), connection);
-        String key = command.getKey();
-        if(!kvStore.containsKey(key)) {
-            connection.reply(new Response(ResponseType.SUCCEED, new GeneralResult(StatusCode.SUCCEED_NO_CONTENT)));
-        } else {
-            logger.debug("delete key: [{}] to log", key);
-            node.appendLog(SerializationUtil.encodes(command));
-        }
+    public void unregisterCommandHandler(Class<?> clazz) {
+        handlerMap.remove(clazz);
     }
 
     private void doSet(SetCommand setCommand) {
         kvStore.set(setCommand.getKey(), setCommand.getValue());
         logger.debug("key/value [{}/{}] was set", setCommand.getKey(), new String(setCommand.getValue()));
         connectorMap.get(setCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
-                new GeneralResult(StatusCode.SUCCEED_OK)));
+                new SinglePayloadResult(StatusCode.SUCCEED_OK)));
         connectorMap.remove(setCommand.getRequestId());
     }
     private void doDel(DelCommand delCommand) {
         kvStore.del(delCommand.getKey());
         logger.debug("key [{}] was deleted", delCommand.getKey());
         connectorMap.get(delCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
-                new GeneralResult(StatusCode.SUCCEED_OK)));
+                new SinglePayloadResult(StatusCode.SUCCEED_OK)));
         connectorMap.remove(delCommand.getRequestId());
-    }
-    private void doMGet(MGetCommand mGetCommand) {
-
-    }
-    private void doMSet(MSetCommand mSetCommand) {
-
-    }
-    private void doMDel(MDelCommand mDelCommand) {
-
     }
 
     private class DefaultStateMachine implements StateMachine {
-        private Map<Class, CommandHandler> handlerMap = new HashMap<>();
-
-        public void register(Class<?> clazz, CommandHandler handler) {
-            handlerMap.put(clazz, handler);
-        }
-        public void unregister(Class<?> clazz, CommandHandler handler) {
-            handlerMap.put(clazz, handler);
-        }
         @Override
         public boolean apply(byte[] command) {
             Object obj = null;
@@ -193,17 +156,9 @@ public class KVDatabaseImpl implements KVDatabase {
             }
             ModifiedCommand modifiedCommand = (ModifiedCommand) obj;
             String requestId = modifiedCommand.getRequestId();
-            Response response = handlerMap.get(modifiedCommand.getClass()).handle(modifiedCommand);
+            Response response = handlerMap.get(modifiedCommand.getClass()).doHandle(modifiedCommand);
             connectorMap.get(requestId).reply(response);
-//            if(obj instanceof SetCommand) {
-//                SetCommand setCommand = (SetCommand) obj;
-//                doSet(setCommand);
-//                requestId = setCommand.getRequestId();
-//            } else if(obj instanceof DelCommand) {
-//                DelCommand delCommand = (DelCommand)obj;
-//                doDel(delCommand);
-//                requestId = delCommand.getRequestId();
-//            }
+            connectorMap.remove(requestId);
             return true;
         }
 

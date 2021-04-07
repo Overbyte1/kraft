@@ -1,17 +1,17 @@
-package common.message;
+package common.message.response;
 
 import java.io.Serializable;
 import java.util.Arrays;
 
-public class GeneralResult implements Serializable {
+public class SinglePayloadResult implements Serializable {
     private int code;
     private byte[] payload;
 
-    public GeneralResult(int code, byte[] payload) {
+    public SinglePayloadResult(int code, byte[] payload) {
         this.code = code;
         this.payload = payload;
     }
-    public GeneralResult(int code) {
+    public SinglePayloadResult(int code) {
         this.code = code;
     }
 
@@ -36,7 +36,7 @@ public class GeneralResult implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        GeneralResult that = (GeneralResult) o;
+        SinglePayloadResult that = (SinglePayloadResult) o;
 
         if (code != that.code) return false;
         return Arrays.equals(payload, that.payload);

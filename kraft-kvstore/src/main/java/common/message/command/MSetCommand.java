@@ -14,6 +14,14 @@ public class MSetCommand extends ModifiedCommand implements Serializable {
         this.values = values;
     }
 
+    public String[] getKeys() {
+        return keys;
+    }
+
+    public byte[][] getValues() {
+        return values;
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("MSetCommand{");

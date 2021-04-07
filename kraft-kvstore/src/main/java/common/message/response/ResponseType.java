@@ -1,4 +1,4 @@
-package common.message;
+package common.message.response;
 
 public class ResponseType {
     public static final int FAILURE = 1;

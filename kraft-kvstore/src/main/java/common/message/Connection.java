@@ -1,5 +1,6 @@
 package common.message;
 
+import common.message.response.Response;
 import io.netty.channel.Channel;
 
 public class Connection<T> {

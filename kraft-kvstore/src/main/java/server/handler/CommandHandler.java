@@ -1,7 +1,8 @@
 package server.handler;
 
-import common.message.Response;
+import common.message.response.Response;
 
 public interface CommandHandler {
-    Response handle(Object command);
+    Response handleCommand(Object command);
+    Response doHandle(Object command);
 }

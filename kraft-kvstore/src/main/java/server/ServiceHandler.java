@@ -1,9 +1,9 @@
 package server;
 
-import common.message.*;
-import common.message.command.DelCommand;
-import common.message.command.GetCommand;
-import common.message.command.SetCommand;
+import common.message.Connection;
+import common.message.response.FailureResult;
+import common.message.response.Response;
+import common.message.response.ResponseType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -22,14 +22,11 @@ public class ServiceHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         logger.debug("receive message: {}", msg);
         Channel channel = ctx.channel();
-        if(msg instanceof GetCommand) {
-            kvDatabase.handleGetCommand(new Connection<>((GetCommand)msg, channel));
-        } else if(msg instanceof SetCommand) {
-            kvDatabase.handleSetCommand(new Connection<>((SetCommand)msg, channel));
-        } else if(msg instanceof DelCommand) {
-            kvDatabase.handleDelCommand(new Connection<>((DelCommand)msg, channel));
-        } else {
-            channel.writeAndFlush(Failure.NOT_SUPPORT_OPERATION);
+        try {
+            kvDatabase.handleCommand(new Connection(msg, channel));
+        } catch (Exception exception) {
+            logger.warn("server can not handle this command: {}", msg);
+            channel.writeAndFlush(new Response<FailureResult>(ResponseType.FAILURE, FailureResult.SERVER_INTERVAL_ERROR));
         }
 
         super.channelRead(ctx, msg);

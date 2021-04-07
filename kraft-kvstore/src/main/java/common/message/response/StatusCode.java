@@ -1,4 +1,4 @@
-package common.message;
+package common.message.response;
 
 public class StatusCode {
     public static int FAIL_TIMEOUT = 100;
