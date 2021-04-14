@@ -3,7 +3,7 @@ package election.node;
 import java.io.Serializable;
 import java.util.UUID;
 
-public class NodeId implements Serializable {
+public class NodeId implements Serializable, Comparable<NodeId> {
     private String value;
 
     public NodeId(String val) {
@@ -28,6 +28,7 @@ public class NodeId implements Serializable {
         return value != null ? value.equals(nodeId.value) : nodeId.value == null;
     }
 
+
     @Override
     public int hashCode() {
         return value != null ? value.hashCode() : 0;
@@ -38,5 +39,10 @@ public class NodeId implements Serializable {
         return "NodeId{" +
                 "value='" + value + '\'' +
                 '}';
+    }
+
+    @Override
+    public int compareTo(NodeId o) {
+        return value.compareTo(o.value);
     }
 }

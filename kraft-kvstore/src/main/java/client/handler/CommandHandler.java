@@ -1,4 +1,6 @@
 package client.handler;
 
-public class CommandHandler {
+public interface CommandHandler {
+    String getCommandName();
+    void execute(String[] args);
 }

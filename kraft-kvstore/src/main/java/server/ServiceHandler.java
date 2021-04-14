@@ -25,7 +25,7 @@ public class ServiceHandler extends ChannelInboundHandlerAdapter {
         try {
             kvDatabase.handleCommand(new Connection(msg, channel));
         } catch (Exception exception) {
-            logger.warn("server can not handle this command: {}", msg);
+            logger.warn("server can not execute this command: {}", msg);
             channel.writeAndFlush(new Response<FailureResult>(ResponseType.FAILURE, FailureResult.SERVER_INTERVAL_ERROR));
         }
 

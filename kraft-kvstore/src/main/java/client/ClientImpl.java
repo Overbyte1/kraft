@@ -1,14 +1,16 @@
 package client;
 
 public class ClientImpl implements Client {
+    private Router router;
+    private SocketChannel channel;
 
     @Override
-    public boolean set(String key) {
+    public boolean set(String key, byte[] value) {
         return false;
     }
 
     @Override
-    public boolean mset(String[] keys) {
+    public boolean mset(String[] keys, byte[][] value) {
         return false;
     }
 

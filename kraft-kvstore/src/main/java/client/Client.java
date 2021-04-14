@@ -1,8 +1,9 @@
 package client;
 
 public interface Client {
-    boolean set(String key);
-    boolean mset(String[] keys);
+    String VERSION = "0.0.1";
+    boolean set(String key, byte[] value);
+    boolean mset(String[] keys, byte[][] value);
     boolean del(String key);
     boolean mdel(String[] keys);
     byte[]  get(String key);
