@@ -2,7 +2,7 @@ package client;
 
 public class ClientImpl implements Client {
     private Router router;
-    private SocketChannel channel;
+    private SocketChannelImpl channel;
 
     @Override
     public boolean set(String key, byte[] value) {

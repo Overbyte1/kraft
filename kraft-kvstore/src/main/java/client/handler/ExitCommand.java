@@ -1,14 +1,15 @@
 package client.handler;
 
-public class ExitCommand implements CommandHandler {
+import client.CommandContext;
 
+public class ExitCommand implements CommandHandler {
     @Override
     public String getCommandName() {
         return "exit";
     }
 
     @Override
-    public void execute(String[] args) {
+    public void execute(String[] args, CommandContext commandContext) {
 
     }
 }

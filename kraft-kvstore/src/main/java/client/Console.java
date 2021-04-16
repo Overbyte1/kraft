@@ -8,35 +8,24 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.completer.ArgumentCompleter;
 import org.jline.reader.impl.completer.NullCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
 
 import java.util.*;
 
 public class Console {
+    private static final Logger logger = LoggerFactory.getLogger(Console.class);
+
     private static final String PROMPT = "kvstore-client " + Client.VERSION + "> ";
     private final Map<String, CommandHandler> commandMap;
-    //private final CommandContext commandContext;
-    private final Router router;
     private final LineReader reader;
-    private boolean running = false;
+    private final CommandContext commandContext;
 
     public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList) {
         commandMap = buildCommandMap(handlerList);
-//        commandMap = buildCommandMap(Arrays.asList(
-//                new ExitCommand(),
-//                new ClientAddServerCommand(),
-//                new ClientRemoveServerCommand(),
-//                new ClientListServerCommand(),
-//                new ClientGetLeaderCommand(),
-//                new ClientSetLeaderCommand(),
-//                new RaftAddNodeCommand(),
-//                new RaftRemoveNodeCommand(),
-//                new KVStoreGetCommand(),
-//                new KVStoreSetCommand()
-//        ));
-        router = new Router(serverMap);
-        //commandContext = new CommandContext(serverMap);
+        commandContext = new CommandContext(serverMap);
 
         ArgumentCompleter completer = new ArgumentCompleter(
                 new StringsCompleter(commandMap.keySet()),
@@ -56,10 +45,11 @@ public class Console {
     }
 
     void start() {
-        running = true;
         showInfo();
-        String line;
-        while (running) {
+        commandContext.setRunning(true);
+        String line = null;
+        logger.debug("start console.");
+        while (commandContext.isRunning()) {
             try {
                 line = reader.readLine(PROMPT);
                 if (line.trim().isEmpty())
@@ -84,13 +74,17 @@ public class Console {
         System.out.println("***********************************************");
     }
     private void printServerList() {
+        Router router = commandContext.getRouter();
         List<NodeEndpoint> serverList = router.getServerList();
         boolean hasLeader = router.hasLeader();
         NodeId nodeId = router.getLeaderId();
         serverList.sort(Comparator.comparing(NodeEndpoint::getNodeId));
         for (NodeEndpoint nodeEndpoint : serverList) {
             System.out.print(nodeEndpoint.getNodeId() + " " + nodeEndpoint.getEndpoint());
-
+            if(hasLeader && nodeId.equals(nodeEndpoint.getNodeId())) {
+                System.out.print(" (leader)");
+            }
+            System.out.println();
         }
     }
 
@@ -98,10 +92,12 @@ public class Console {
         String[] commandNameAndArguments = line.split("\\s+", 2);
         String commandName = commandNameAndArguments[0];
         CommandHandler command = commandMap.get(commandName);
+        logger.debug("input command: {}", commandName);
         if (command == null) {
+            logger.warn("handler of command [{}] not found", commandName);
             throw new IllegalArgumentException("no such command [" + commandName + "]");
         }
-        command.execute(commandNameAndArguments);
+        command.execute(Arrays.copyOfRange(commandNameAndArguments, 1, commandNameAndArguments.length), commandContext);
         //command.execute(commandNameAndArguments.length > 1 ? commandNameAndArguments[1] : "", commandContext);
     }
 }

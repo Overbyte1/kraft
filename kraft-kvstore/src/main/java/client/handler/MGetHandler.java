@@ -1,5 +1,7 @@
 package client.handler;
 
+import client.CommandContext;
+
 public class MGetHandler implements CommandHandler {
     @Override
     public String getCommandName() {
@@ -7,7 +9,7 @@ public class MGetHandler implements CommandHandler {
     }
 
     @Override
-    public void execute(String[] args) {
+    public void execute(String[] args, CommandContext commandContext) {
 
     }
 }
