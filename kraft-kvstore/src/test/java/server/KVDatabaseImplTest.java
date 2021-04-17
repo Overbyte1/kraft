@@ -1,5 +1,6 @@
 package server;
 
+import client.handler.LeaderHandler;
 import common.codec.FrameDecoder;
 import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
@@ -45,6 +46,8 @@ public class KVDatabaseImplTest {
         kvDatabase.registerCommandHandler(MDelCommand.class, new MDelCommandHandler(kvStore, node));
         kvDatabase.registerCommandHandler(MSetCommand.class, new MSetCommandHandler(kvStore, node));
         kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
+        kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
+        kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
 
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();
@@ -212,6 +215,18 @@ public class KVDatabaseImplTest {
         assertEquals(result, redirectResult);
 
         cyclicBarrier.reset();
+    }
+    @Test
+    public void testLeaderCommand() throws BrokenBarrierException, InterruptedException {
+        NodeEndpoint nodeEndpoint = new NodeEndpoint(new NodeId("A"), new Endpoint("localhost", 8848));
+        node.setNodeEndpoint(nodeEndpoint);
+        channel.writeAndFlush(new LeaderCommand());
+        cyclicBarrier.await();
+
+        Object receiveMessage = testHandle.getReceiveMessage();
+        assertEquals(true, receiveMessage instanceof Response);
+        assertEquals(true, ((Response)receiveMessage).getBody() instanceof RedirectResult);
+        assertEquals(nodeEndpoint, ((Response) receiveMessage).getBody());
     }
 }
 class TestHandle extends ChannelInboundHandlerAdapter {

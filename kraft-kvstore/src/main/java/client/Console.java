@@ -1,5 +1,6 @@
 package client;
 
+import client.balance.LoadBalance;
 import client.handler.CommandHandler;
 import election.node.NodeId;
 import org.jline.reader.EndOfFileException;
@@ -23,9 +24,9 @@ public class Console {
     private final LineReader reader;
     private final CommandContext commandContext;
 
-    public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList) {
+    public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList, LoadBalance loadBalance) {
         commandMap = buildCommandMap(handlerList);
-        commandContext = new CommandContext(serverMap);
+        commandContext = new CommandContext(serverMap, loadBalance);
 
         ArgumentCompleter completer = new ArgumentCompleter(
                 new StringsCompleter(commandMap.keySet()),
@@ -88,8 +89,8 @@ public class Console {
         }
     }
 
-    private void dispatchCommand(String line) {
-        String[] commandNameAndArguments = line.split("\\s+", 2);
+    public void dispatchCommand(String line) {
+        String[] commandNameAndArguments = line.split("\\s+");
         String commandName = commandNameAndArguments[0];
         CommandHandler command = commandMap.get(commandName);
         logger.debug("input command: {}", commandName);

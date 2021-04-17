@@ -276,7 +276,7 @@ public class NodeImpl implements Node {
 
         //向所有节点发送请求投票rpc
         RequestVoteMessage requestVoteMessage = log.createRequestVoteMessage(currentNodeId, currentRole.getCurrentTerm());
-        rpcHandler.sendRequestVoteMessage(requestVoteMessage, getAllNodeEndpoint());
+        rpcHandler.sendRequestVoteMessage(requestVoteMessage, getAllNodeEndpointSet());
     }
     private NodeEndpoint getNodeEndpoint(NodeId nodeId) {
         GroupMember groupMember = nodeGroup.getGroupMember(nodeId);
@@ -286,7 +286,20 @@ public class NodeImpl implements Node {
         }
         return groupMember.getNodeEndpoint();
     }
-    private Set<NodeEndpoint> getAllNodeEndpoint() {
+
+    @Override
+    public NodeEndpoint[] getAllNodeEndpoint() {
+        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
+        NodeEndpoint[] result = new NodeEndpoint[allGroupMember.size()];
+        int idx = 0;
+        for (GroupMember groupMember : allGroupMember) {
+            result[idx] = groupMember.getNodeEndpoint();
+            idx++;
+        }
+        return result;
+    }
+
+    private Set<NodeEndpoint> getAllNodeEndpointSet() {
         Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
         Set<NodeEndpoint> set = new HashSet<>();
         for (GroupMember groupMember : allGroupMember) {

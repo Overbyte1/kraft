@@ -36,6 +36,11 @@ public class NodeMock implements Node {
     }
 
     @Override
+    public NodeEndpoint[] getAllNodeEndpoint() {
+        return new NodeEndpoint[0];
+    }
+
+    @Override
     public void registerStateMachine(StateMachine stateMachine) {
         this.stateMachine = stateMachine;
     }

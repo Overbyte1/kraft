@@ -25,10 +25,18 @@ public class SinglePayloadResult implements Serializable {
 
     @Override
     public String toString() {
-        return "GeneralResult{" +
-                "code=" + code +
-                ", payload=" + Arrays.toString(payload) +
-                '}';
+        final StringBuffer sb = new StringBuffer("SinglePayloadResult{");
+        sb.append("code=").append(code);
+        sb.append(", payload=");
+        if (payload == null) sb.append("null");
+        else {
+            sb.append('[');
+            for (int i = 0; i < payload.length; ++i)
+                sb.append(i == 0 ? "" : ", ").append(payload[i]);
+            sb.append(']');
+        }
+        sb.append('}');
+        return sb.toString();
     }
 
     @Override

@@ -13,6 +13,7 @@ import io.netty.handler.logging.LoggingHandler;
 import rpc.Endpoint;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -64,6 +65,7 @@ public class SocketChannelImpl implements SocketChannel {
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(1);
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
+                .channel(NioSocketChannel.class)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .handler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
@@ -81,11 +83,13 @@ public class SocketChannelImpl implements SocketChannel {
         try {
             future = bootstrap.connect(ip, port).sync();
             channel = future.channel();
-        } catch (InterruptedException e) {
-            System.err.println(e.getMessage());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            throw new SendTimeoutException("connect error");
         }
 
     }
+    @ChannelHandler.Sharable
     private class ReadHandler extends ChannelInboundHandlerAdapter {
         private Object message;
         @Override

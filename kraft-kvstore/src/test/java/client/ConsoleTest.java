@@ -1,5 +1,6 @@
 package client;
 
+import client.balance.PollingLoadBalance;
 import client.handler.*;
 import election.node.NodeId;
 import org.junit.Test;
@@ -24,12 +25,12 @@ public class ConsoleTest {
                 new SetHandler()
         );
         Map<NodeId, Endpoint> endpointMap = new HashMap<>();
-        endpointMap.put(new NodeId("B"), new Endpoint("2222222222222", 1235));
-        endpointMap.put(new NodeId("A"), new Endpoint("1111111111111", 1234));
-        endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
-        endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
+        endpointMap.put(new NodeId("B"), new Endpoint("localhost", 8848));
+//        endpointMap.put(new NodeId("A"), new Endpoint("1111111111111", 1234));
+//        endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
+//        endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
 
-        Console console = new Console(endpointMap, handlers);
+        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap));
         console.start();
     }
     @Test
@@ -40,8 +41,8 @@ public class ConsoleTest {
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        String s = scanner.nextLine();
-        System.out.println("s = " + s);
+        ConsoleTest consoleTest = new ConsoleTest();
+        consoleTest.testStart();
     }
+
 }

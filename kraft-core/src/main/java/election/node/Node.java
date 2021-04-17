@@ -9,5 +9,6 @@ public interface Node {
     boolean appendLog(byte[] command);
     boolean isLeader();
     NodeEndpoint getLeaderNodeEndpoint();
+    NodeEndpoint[] getAllNodeEndpoint();
     void registerStateMachine(StateMachine stateMachine);
 }

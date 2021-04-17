@@ -3,6 +3,8 @@ package client.balance;
 import client.SendTimeoutException;
 import client.SocketChannelImpl;
 import election.node.NodeId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
 
@@ -15,6 +17,7 @@ import java.util.Map;
  * 负载均衡策略：轮询
  */
 public class PollingLoadBalance extends AbstractLoadBalance {
+    private static final Logger logger = LoggerFactory.getLogger(PollingLoadBalance.class);
     private List<NodeEndpoint> inlineServerList;
     private List<NodeEndpoint> timeoutServerList;
     private Iterator<NodeEndpoint> iterator;
@@ -38,10 +41,12 @@ public class PollingLoadBalance extends AbstractLoadBalance {
             }
             NodeEndpoint nodeEndpoint = iterator.next();
             try {
+                logger.info("send request to: {}", nodeEndpoint);
                 resp = doSend(nodeEndpoint.getEndpoint(), msg);
                 return resp;
             } catch (SendTimeoutException e) {
                 getTimeoutServerList().add(nodeEndpoint);
+                iterator.remove();
             }
         }
         throw new NoAvailableServerException("no available server");

@@ -13,8 +13,9 @@ public class DefaultResponseParser implements ResponseParser {
         }
         if(type == ResponseType.REDIRECT) {
             String ret =  "redirect to " + ((RedirectResult)(response.getBody())).getNodeEndpoint().toString();
+            System.out.println(ret);
             commandHandler.execute(args, commandContext);
-            return ret;
+            return "";
         }
         if(type == ResponseType.SUCCEED) {
             Object body = response.getBody();
@@ -22,16 +23,21 @@ public class DefaultResponseParser implements ResponseParser {
                 return "ok";
             }
             if(body instanceof SinglePayloadResult) {
-                return new String(((SinglePayloadResult)body).getPayload());
+                byte[] bytes = ((SinglePayloadResult)body).getPayload();
+                return bytesToString(bytes);
             }
             if(body instanceof MultiPayloadResult) {
                 StringBuilder sb = new StringBuilder();
                 MultiPayloadResult result = (MultiPayloadResult)body;
                 for(byte[] bytes : result.getPayload()) {
-                    sb.append(new String(bytes)).append(' ');
+                    sb.append(bytesToString(bytes)).append(' ');
                 }
+                return sb.toString();
             }
         }
         return "unknown error";
+    }
+    private String bytesToString(byte[] bytes) {
+        return bytes == null ? "nil" : new String(bytes);
     }
 }
