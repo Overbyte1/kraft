@@ -36,11 +36,10 @@ public class KVDatabaseImpl implements KVDatabase {
     2. 获取Leader的地址信息，返回客户端进行重定向
 
      */
-    private Node node;
-    //private Map<String, byte[]> kvStore = new HashMap<>();
-    private Map<String, Connection> connectorMap = new ConcurrentHashMap<>();
-    private StateMachine stateMachine = new DefaultStateMachine();
-    private Map<Class, CommandHandler> handlerMap = new HashMap<>();
+    private final Node node;
+    private final Map<String, Connection> connectorMap = new ConcurrentHashMap<>();
+    private final Map<Class, CommandHandler> handlerMap = new HashMap<>();
+    private final StateMachine stateMachine = new DefaultStateMachine();
 
     private KVStore kvStore;
 
@@ -77,18 +76,19 @@ public class KVDatabaseImpl implements KVDatabase {
                 });
         try {
             serverBootstrap.bind(port).sync();
+            logger.info("server was started");
         } catch (InterruptedException e) {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
-            logger.error(e.getMessage());
-            e.printStackTrace();
+            logger.error("fail to start server, cause is: ", e.getMessage());
+            //e.printStackTrace();
         }
-        logger.debug("server started");
+
     }
 
     @Override
     public void stop() {
-
+        logger.info("server was stopped");
     }
 
     private void redirectOrFail(Connection connection) {
@@ -151,7 +151,7 @@ public class KVDatabaseImpl implements KVDatabase {
             try {
                 obj = SerializationUtil.decode(command);
             } catch (Exception e) {
-                logger.debug("fail to decode bytes: {}", e.getMessage());
+                logger.warn("fail to decode bytes: {}", e.getMessage());
                 return false;
             }
             ModifiedCommand modifiedCommand = (ModifiedCommand) obj;

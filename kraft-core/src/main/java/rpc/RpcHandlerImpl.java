@@ -57,9 +57,6 @@ public class RpcHandlerImpl implements RpcHandler {
                         pipeline.addLast(new ProtocolDecoder());
                         pipeline.addLast(new ProtocolEncoder());
 
-                        //TODO:remove it
-                        //pipeline.addLast(new LoggingHandler(LogLevel.INFO));
-
                         pipeline.addLast(new IdentificationHandler(channelGroup));
                         pipeline.addLast(ServiceInboundHandler.getInstance());
                     }
@@ -71,7 +68,7 @@ public class RpcHandlerImpl implements RpcHandler {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
             logger.error(e.getMessage());
-            e.printStackTrace();
+            //e.printStackTrace();
         }
     }
 

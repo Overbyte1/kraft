@@ -13,7 +13,6 @@ import io.netty.handler.logging.LoggingHandler;
 import rpc.Endpoint;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;

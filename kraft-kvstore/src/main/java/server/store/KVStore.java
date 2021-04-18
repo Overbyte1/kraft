@@ -5,4 +5,5 @@ public interface KVStore {
     void del(String key);
     boolean containsKey(String key);
     byte[] get(String key);
+    void close();
 }

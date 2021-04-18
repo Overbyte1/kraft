@@ -24,4 +24,9 @@ public class MemHTKVStore implements KVStore {
     public byte[] get(String key) {
         return storeMap.get(key);
     }
+
+    @Override
+    public void close() {
+
+    }
 }
