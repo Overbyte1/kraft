@@ -1,6 +1,7 @@
 package log.store;
 
 import election.LogIndexOutOfBoundsException;
+import log.entry.EmptyEntry;
 import log.entry.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,13 +13,13 @@ public class MemoryLogStore extends AbstractLogStore implements LogStore {
     private static final Logger logger = LoggerFactory.getLogger(MemoryLogStore.class);
     private List<Entry> entryList;
     //第一条日志的index为1
-    private int lastLogIndex;
-    private int offset;
+//    private int lastLogIndex;
+    //private int offset;
 
     public MemoryLogStore() {
         entryList = new ArrayList<>();
         lastLogIndex = 0;
-        offset = 0;
+        //offset = 0;
     }
 
     @Override
@@ -119,6 +120,12 @@ public class MemoryLogStore extends AbstractLogStore implements LogStore {
 
     @Override
     public boolean appendEntry(Entry entry, long preTerm, long preLogIndex) {
+        if(match(entry.getIndex(), preTerm, preLogIndex)) {
+            lastLogIndex++;
+            entry.setIndex(lastLogIndex);
+            entryList.add(entry);
+            return true;
+        }
         return false;
     }
 
@@ -126,7 +133,7 @@ public class MemoryLogStore extends AbstractLogStore implements LogStore {
     public  boolean appendEmptyEntry(Entry entry) {
         lastLogIndex++;
         entry.setIndex(lastLogIndex);
-        logger.debug("entry {} was append", entry);
+        logger.debug("entry {} was appended, last log index is: {}", entry, lastLogIndex);
         entryList.add(entry);
         return true;
     }
@@ -170,11 +177,11 @@ public class MemoryLogStore extends AbstractLogStore implements LogStore {
     }
 
     private  int toListIndex(long logIndex) {
-        return (int) (logIndex - offset - 1);
+        return (int) (logIndex - 1);
     }
 
     private  long toLogIndex(int listIndex) {
-        return listIndex + offset + 1;
+        return listIndex + 1;
     }
 
 

@@ -109,7 +109,7 @@ public class LogImpl implements Log {
         //nextIndex初始值为1，在日志已经全部复制到Follower的情况下比lastLogIndex大1
 
         if(logStore.isEmpty()) {
-            logger.warn("log store is empty, it have at least an empty log normally");
+            logger.warn("log store is empty, it should have at least one entry");
             message = new AppendEntriesMessage(term, leaderId, 0, 0, commitIndex, new ArrayList<>());
         } else {
             EntryMeta preEntryMeta = logStore.getPreEntryMeta(nextIndex);

@@ -21,43 +21,18 @@ import java.io.IOException;
 
 public class RpcHandlerImplTest2 {
     private Node node;
-//    private int port;
-//    private ChannelGroup channelGroup;
-//    private RpcHandlerImpl rpcHandler;
-//    private NodeImpl node;
-//    private ClusterConfig config;
-//    @Before
-//    public void init() throws IOException {
-//        config = new DefaultConfigLoader().load(null);
-//        port = 8092;
-//        channelGroup = new ChannelGroup(new NodeId("C"));
-//        NodeGroup nodeGroup = initNodeGroup();
-//        rpcHandler = new RpcHandlerImpl(channelGroup, port);
-//        TaskScheduler scheduleExecutor = new SingleThreadTaskScheduler(config.getMinElectionTimeout(),
-//                config.getMaxElectionTimeout(), config.getLogReplicationResultTimeout());
-//
-//        node = new NodeImpl(null, nodeGroup, rpcHandler, scheduleExecutor, config);
-//    }
-//    private NodeGroup initNodeGroup() {
-//        NodeGroup nodeGroup = new NodeGroup();
-//        NodeId nodeId1 = new NodeId("A");
-//        GroupMember member1 = new GroupMember(new ReplicationState(0, 0),
-//                new NodeEndpoint(nodeId1, new Endpoint("localhost", 8090)));
-//        NodeId nodeId2 = new NodeId("B");
-//        GroupMember member2 = new GroupMember(new ReplicationState(0, 0),
-//                new NodeEndpoint(nodeId2, new Endpoint("localhost", 8091)));
-//        nodeGroup.addGroupMember(nodeId1, member1);
-//        nodeGroup.addGroupMember(nodeId2, member2);
-//        return nodeGroup;
-//    }
 
     @Before
     public void builder() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
-        config.setPort(9991);
-        config.setPath(config.getPath() + config.getSelfId().getValue());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft3.json"), ClusterConfig.class);
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        node = builder.justBuild(config, new DefaultStateMachine());
+        node = builder.withId("C")
+                .withListenPort(config.getPort())
+                .withNodeList(config.getMembers())
+                .withLogReplicationInterval(config.getLogReplicationInterval())
+                .withMemLogStore()
+                .withStateMachine(new DefaultStateMachine())
+                .build();
     }
     @Test
     public void testSendRequestVoteMessage() throws InterruptedException {

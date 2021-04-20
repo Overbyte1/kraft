@@ -1,5 +1,6 @@
 package rpc;
 
+import io.netty.channel.ChannelFuture;
 import rpc.exception.NetworkException;
 import rpc.message.AppendEntriesMessage;
 import rpc.message.AppendEntriesResultMessage;
@@ -14,8 +15,8 @@ public class NioChannel implements rpc.Channel {
         nettyChannel = channel;
     }
 
-    public void writeMessage(Object message) {
-        nettyChannel.writeAndFlush(message);
+    public ChannelFuture writeMessage(Object message) {
+        return nettyChannel.writeAndFlush(message);
     }
 
     @Override
@@ -43,11 +44,6 @@ public class NioChannel implements rpc.Channel {
 
     @Override
     public void close() {
-        try {
-            //TODO:同步关闭连接？
-            nettyChannel.close().sync();
-        } catch (InterruptedException e) {
-            throw new NetworkException("fail to close connection: " + nettyChannel);
-        }
+        nettyChannel.close();
     }
 }

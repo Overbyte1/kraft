@@ -95,11 +95,17 @@ public class NodeImplTest2 {
 //    }
     @Before
     public void builder() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
-        config.setPort(9993);
-        config.setPath(config.getPath() + config.getSelfId().getValue());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft3.json"), ClusterConfig.class);
+//        config.setPort(9993);
+//        config.setPath(config.getPath() + config.getSelfId().getValue() + "/");
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        node = builder.justBuild(config, new DefaultStateMachine());
+        node = builder.withId("C")
+                .withListenPort(config.getPort())
+                .withNodeList(config.getMembers())
+                .withMemLogStore()
+                .withStateMachine(new DefaultStateMachine())
+                .build();
+//        node = builder.justBuild(config, new DefaultStateMachine());
     }
     @Test
     public void testLog() {

@@ -6,6 +6,11 @@ import java.util.Map;
 
 public class NodeGroup {
     private Map<NodeId, GroupMember> nodesMap = new HashMap<>();
+    private NodeId selfNodeId;
+
+    public void setSelfNodeId(NodeId selfNodeId) {
+        this.selfNodeId = selfNodeId;
+    }
 
     public int getSize() {
         return nodesMap.size();
@@ -33,6 +38,9 @@ public class NodeGroup {
         //nodesMap保存了其他节点的复制状态，除去当前Leader节点，只需要nodesMap.size()/2的节点符合条件matchIndex >= index即可
         int majorNum = nodesMap.size() / 2;
         for (GroupMember member : nodesMap.values()) {
+            if(member.getNodeEndpoint().getNodeId().equals(selfNodeId)) {
+                continue;
+            }
             replicationState = member.getReplicationState();
             if(replicationState.getMatchIndex() >= index) {
                 majorNum--;

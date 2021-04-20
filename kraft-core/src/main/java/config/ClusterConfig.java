@@ -19,6 +19,9 @@ public class ClusterConfig {
     private int maxTransportEntries = -1;
     private String path;
 
+    private long maxDataFileSize;
+    private int bufferSize;
+
     //members
     private List<NodeEndpoint> members;
     private NodeId selfId;
@@ -110,6 +113,22 @@ public class ClusterConfig {
 
     public void setMembers(List<NodeEndpoint> members) {
         this.members = members;
+    }
+
+    public long getMaxDataFileSize() {
+        return maxDataFileSize;
+    }
+
+    public void setMaxDataFileSize(long maxDataFileSize) {
+        this.maxDataFileSize = maxDataFileSize;
+    }
+
+    public int getBufferSize() {
+        return bufferSize;
+    }
+
+    public void setBufferSize(int bufferSize) {
+        this.bufferSize = bufferSize;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package schedule;
 
+import com.google.common.util.concurrent.FutureCallback;
+
 import javax.annotation.Nonnull;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -12,6 +14,34 @@ public class SingleThreadTaskExecutor implements TaskExecutor {
     @Override
     public Future<?> submit(Runnable task) {
         return executorService.submit(task);
+    }
+
+    @Override
+    public <V> Future<V> submit(@Nonnull Callable<V> task, FutureCallback<Object> callback) {
+        Callable<V> tempTask = ()->{
+            V res = null;
+            try {
+                res = task.call();
+                callback.onSuccess(null);
+            } catch (Exception e) {
+                callback.onFailure(e);
+            }
+            return res;
+        };
+        return executorService.submit(tempTask);
+    }
+    @Override
+    public void submit(@Nonnull Runnable task, FutureCallback<Object> callback) {
+        Runnable tempTask = ()->{
+            try {
+                task.run();
+                callback.onSuccess(null);
+            } catch (Exception e) {
+                callback.onFailure(e);
+            }
+
+        };
+        executorService.execute(tempTask);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package election.node;
 
+import com.google.common.util.concurrent.FutureCallback;
 import config.ClusterConfig;
 import election.config.GlobalConfig;
 import election.exception.IncompleteArgumentException;
@@ -15,6 +16,7 @@ import log.LogImpl;
 import log.entry.Entry;
 import log.store.FileLogStore;
 import log.store.LogStore;
+import log.store.MemoryLogStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.ChannelGroup;
@@ -26,8 +28,11 @@ import rpc.handler.ServiceInboundHandler;
 import rpc.message.*;
 import schedule.*;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -45,6 +50,16 @@ public class NodeImpl implements Node {
     private TaskExecutor taskExecutor = new SingleThreadTaskExecutor();
 
     private TaskScheduler taskScheduler;
+    private static final FutureCallback<Object> LOGGING_FUTURE_CALLBACK = new FutureCallback<Object>() {
+        @Override
+        public void onSuccess(@Nullable Object result) {
+        }
+
+        @Override
+        public void onFailure(@Nonnull Throwable t) {
+            logger.warn("failure", t);
+        }
+    };
 
 
     private NodeId currentNodeId;
@@ -55,7 +70,7 @@ public class NodeImpl implements Node {
 
     private Random random = new Random();
     //private GlobalConfig config;
-    private ClusterConfig config;
+    //private ClusterConfig config;
     private long logReplicationInterval;
 
     private volatile ElectionTimeoutFuture electionTimeoutFuture;
@@ -63,12 +78,12 @@ public class NodeImpl implements Node {
     private volatile LogReplicationFuture replicationTimeoutFuture;
 
 
-    private NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler, ClusterConfig config) {
+    private NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler) {
         this.currentRole = currentRole;
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
         this.taskScheduler = taskScheduler;
-        this.config = config;
+//        this.config = config;
     }
 
     private NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler,
@@ -94,12 +109,22 @@ public class NodeImpl implements Node {
         private TaskScheduler taskScheduler;
         private LogStore logStore;
         private Log log;
-        private ClusterConfig config;
+
+        private int port = 8888;
+        private int logReplicationInterval = 500;
+        private int connectTimeout = 3000;
+        private int minElectionTimeout = 6000;
+        private int maxElectionTimeout = 10000;
 
         public static NodeBuilder builder() {
             return new NodeBuilder();
         }
 
+        /**
+         * 设置nodeId，必须被调用
+         * @param id
+         * @return
+         */
         public NodeBuilder withId(String id) {
             this.nodeId = new NodeId(id);
             return this;
@@ -109,27 +134,68 @@ public class NodeImpl implements Node {
             return this;
         }
 
+        /**
+         * 设置集群的所有成员，必须被调用
+         * @param nodeList
+         * @return
+         */
         public NodeBuilder withNodeList(List<NodeEndpoint> nodeList) {
+            if(nodeId == null) {
+                throw new IncompleteArgumentException("node id was not set");
+            }
             nodeGroup = new NodeGroup();
             for (NodeEndpoint nodeEndpoint : nodeList) {
                 //TODO:深拷贝
                 nodeGroup.addGroupMember(nodeEndpoint.getNodeId(), new GroupMember(nodeEndpoint));
             }
+            nodeGroup.setSelfNodeId(nodeId);
             return this;
         }
+
+        /**
+         * 设置状态机，必须被调用
+         * @param stateMachine
+         * @return
+         */
         public NodeBuilder withStateMachine(StateMachine stateMachine) {
             this.stateMachine = stateMachine;
             return this;
         }
+
+        /**
+         * 设置选举的最小、最大超时时间，可选
+         * @param minElectionTimeout
+         * @param maxElectionTimeout
+         * @return
+         */
         public NodeBuilder withElectionTimeout(int minElectionTimeout, int maxElectionTimeout) {
             assert(minElectionTimeout > 0 && maxElectionTimeout > 0 && maxElectionTimeout >= minElectionTimeout);
-
-            taskScheduler = new SingleThreadTaskScheduler(minElectionTimeout, maxElectionTimeout,
-                    config.getLogReplicationResultTimeout());
+            this.minElectionTimeout = minElectionTimeout;
+            this.maxElectionTimeout = maxElectionTimeout;
+            //taskScheduler = new SingleThreadTaskScheduler(minElectionTimeout, maxElectionTimeout, logReplicationTimeout);
             return this;
         }
+        public NodeBuilder withLogReplicationInterval(int interval) {
+            this.logReplicationInterval = interval;
+            return this;
+        }
+
         public NodeBuilder withPath(String path) throws IOException {
             logStore = new FileLogStore(path);
+            return this;
+        }
+        public NodeBuilder withListenPort(int port) {
+            assert(port > 0);
+            this.port = port;
+            return this;
+        }
+
+        /**
+         * 使用内存储日志，内存数据容易丢失，调试时使用
+         * @return
+         */
+        public NodeBuilder withMemLogStore() {
+            logStore = new MemoryLogStore();
             return this;
         }
 
@@ -146,13 +212,17 @@ public class NodeImpl implements Node {
             if(nodeId == null) {
                 throw new IncompleteArgumentException("node id was not set");
             }
+            taskScheduler = new SingleThreadTaskScheduler(minElectionTimeout, maxElectionTimeout, logReplicationInterval);
             log = new LogImpl(logStore, stateMachine, nodeGroup);
             ChannelGroup channelGroup = new ChannelGroup(nodeId);
-            rpcHandler = new RpcHandlerImpl(channelGroup, config.getPort(), config.getConnectTimeout());
-            return new NodeImpl(nodeGroup, rpcHandler, taskScheduler, log, nodeId, config.getLogReplicationInterval());
+            rpcHandler = new RpcHandlerImpl(channelGroup, port, connectTimeout, nodeId);
+            //TODO：打印所有配置信息
+            return new NodeImpl(nodeGroup, rpcHandler, taskScheduler, log, nodeId, logReplicationInterval);
         }
         public Node justBuild(ClusterConfig config, StateMachine stateMachine) throws IOException {
             return withId(config.getSelfId())
+                    .withListenPort(config.getPort())
+                    .withLogReplicationInterval(config.getLogReplicationInterval())
                     .withStateMachine(stateMachine)
                     .withNodeList(config.getMembers())
                     .withElectionTimeout(config.getMinElectionTimeout(), config.getMaxElectionTimeout())
@@ -175,6 +245,7 @@ public class NodeImpl implements Node {
             4.3 选举超时，term + 1，发起新一轮选举
          */
         logger.info("current node is starting......");
+        logger.info("current node id is {}", currentNodeId);
         becomeToRole(new FollowerRole(currentNodeId, 0));
         rpcHandler.initialize();
 //        registerHandler(currentRole);
@@ -192,9 +263,7 @@ public class NodeImpl implements Node {
     public boolean appendLog(byte[] command) {
         if(currentRole instanceof LeaderRole) {
             taskExecutor.submit(
-                    () -> {
-                        log.appendGeneralEntry(currentRole.getCurrentTerm(), command);
-                    }
+                    () -> log.appendGeneralEntry(currentRole.getCurrentTerm(), command), LOGGING_FUTURE_CALLBACK
             );
         }
         return false;
@@ -211,15 +280,15 @@ public class NodeImpl implements Node {
 
     @Override
     public NodeEndpoint getLeaderNodeEndpoint() {
-        Future<NodeEndpoint> future = taskExecutor.submit(
-                () -> {
-                    NodeId voteFor = currentRole.getVoteFor();
-                    if (voteFor != null) {
-                        return nodeGroup.getGroupMember(voteFor).getNodeEndpoint();
-                    }
-                    return null;
-                }
-        );
+        Callable<NodeEndpoint> task = () -> {
+            NodeId voteFor = currentRole.getVoteFor();
+            if (voteFor != null) {
+                return nodeGroup.getGroupMember(voteFor).getNodeEndpoint();
+            }
+            return null;
+
+        };
+        Future<NodeEndpoint> future = taskExecutor.submit(task);
         try {
             return future.get();
         } catch (InterruptedException e) {
@@ -293,6 +362,8 @@ public class NodeImpl implements Node {
     private void initReplicationState() {
         Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
         for (GroupMember member : allGroupMember) {
+            if(member.getNodeEndpoint().getNodeId().equals(currentNodeId)) continue;
+
             member.setReplicationState(new ReplicationState(log.getLastLogIndex(), 0));
         }
     }
@@ -307,8 +378,11 @@ public class NodeImpl implements Node {
                     //为每个节点都维护上一次复制日志的时间
                     Collection<GroupMember> groupMembers = nodeGroup.getAllGroupMember();
                     for (GroupMember member : groupMembers) {
+                        //跳过自己
+                        if(member.getNodeEndpoint().getNodeId().equals(currentNodeId)) continue;
+
                         //TODO：配置 以及 考虑隐藏 ReplicationState
-                        if(member.shouldReplication(config.getLogReplicationInterval())) {
+                        if(member.shouldReplication(logReplicationInterval)) {
                             AppendEntriesMessage message = log.createAppendEntriesMessage(currentNodeId,
                                     currentRole.getCurrentTerm(), member.getReplicationState().getNextIndex());
                             //更新日志发送时间
@@ -316,7 +390,7 @@ public class NodeImpl implements Node {
                             rpcHandler.sendAppendEntriesMessage(message, member.getNodeEndpoint());
                         }
                     }
-                }
+                }, LOGGING_FUTURE_CALLBACK
         );
     }
     private void registerHandler(AbstractRole targetRole) {
@@ -402,7 +476,7 @@ public class NodeImpl implements Node {
 
                     logger.debug("election timeout, current term is {}", currentRole.getCurrentTerm());
                     startElection();
-                }
+                }, LOGGING_FUTURE_CALLBACK
         );
     }
 
@@ -430,9 +504,9 @@ public class NodeImpl implements Node {
         this.log = log;
     }
 
-    public void setConfig(ClusterConfig config) {
-        this.config = config;
-    }
+//    public void setConfig(ClusterConfig config) {
+//        this.config = config;
+//    }
     //    private void logReplicationTimeout() {
 //        long currentTerm = currentRole.getCurrentTerm();
 //        logger.info("logReplication timeout, current term is {}", currentTerm);
@@ -476,14 +550,14 @@ public class NodeImpl implements Node {
         @Override
         public RequestVoteResultMessage handleRequestVoteRequest(AbstractMessage<RequestVoteMessage> message) {
             RequestVoteMessage requestVoteMessage = message.getBody();
-            logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
+            logger.debug("receive RequestVoteMessage, term is {}", requestVoteMessage.getTerm());
             long messageTerm = requestVoteMessage.getTerm();
             long currentTerm = currentRole.getCurrentTerm();
 
 
             long lastLogTerm = requestVoteMessage.getLastLogTerm();
             long lastLogIndex = requestVoteMessage.getLastLogIndex();
-            if(messageTerm > currentTerm) {
+        if(messageTerm > currentTerm) {
                 //boolean voteGranted = false;
                 boolean voteGranted = !log.isNewerThan(lastLogTerm, lastLogIndex);
                 NodeId voteFor = null;
@@ -563,7 +637,7 @@ public class NodeImpl implements Node {
         public AppendEntriesResultMessage handleAppendEntriesRequest(AbstractMessage<AppendEntriesMessage> message) {
             AppendEntriesMessage appendRequestMsg = message.getBody();
 
-            logger.debug("receive AppendEntriesResultMessage, term is {}", appendRequestMsg.getTerm());
+            logger.debug("receive AppendEntriesRequestMessage, term is {}", appendRequestMsg.getTerm());
 
             long currentTerm = currentRole.getCurrentTerm();
             long term = appendRequestMsg.getTerm();
@@ -595,7 +669,7 @@ public class NodeImpl implements Node {
         @Override
         public RequestVoteResultMessage handleRequestVoteRequest(AbstractMessage<RequestVoteMessage> message) {
             RequestVoteMessage requestVoteMessage = message.getBody();
-            logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
+            logger.debug("receive RequestVoteMessage, term is {}", requestVoteMessage.getTerm());
             long messageTerm = requestVoteMessage.getTerm();
             long currentTerm = currentRole.getCurrentTerm();
 
@@ -668,7 +742,7 @@ public class NodeImpl implements Node {
         @Override
         public RequestVoteResultMessage handleRequestVoteRequest(AbstractMessage<RequestVoteMessage> message) {
             RequestVoteMessage requestVoteMessage = message.getBody();
-            logger.warn("receive AppendEntriesResultMessage, term is {}", requestVoteMessage.getTerm());
+            logger.debug("receive RequestVoteMessage, term is {}", requestVoteMessage.getTerm());
             long messageTerm = requestVoteMessage.getTerm();
             long currentTerm = currentRole.getCurrentTerm();
 

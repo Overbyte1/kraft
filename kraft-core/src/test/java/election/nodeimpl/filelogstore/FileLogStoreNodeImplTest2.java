@@ -30,77 +30,17 @@ import java.util.Properties;
 
 public class FileLogStoreNodeImplTest2 {
     private Node node;
-//    private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
-//    private String path = "./data/node2/";
-//    private int selfPort;
-//    private NodeId selfNodeId;
-//    private ChannelGroup channelGroup;
-//    private RpcHandlerImpl rpcHandler;
-//    private NodeImpl node;
-//    private LogStore logStore;
-//    private StateMachine stateMachine;
-//    private NodeGroup nodeGroup;
-//    private Log defaultLog;
-//    private ClusterConfig config;
-//    @Before
-//    public void initNodeGroup() throws IOException {
-//        nodeGroup = new NodeGroup();
-//
-//        int seq = 3, memberNum = 5;
-//        String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
-//        String selfIdName = "self_id", selfPortName = "self_port";
-//        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member3.properties");
-//        Properties properties = new Properties();
-//        properties.load(inputStream);
-//
-//        selfNodeId = new NodeId(properties.getProperty(selfIdName));
-//        selfPort = Integer.parseInt(properties.getProperty(selfPortName));
-//        //nodeGroup
-//        for(int i = 1; i <= memberNum; i++) {
-//            if(i == seq) continue;
-//            String nodeKey = commonPrefix + i + idSuffix;
-//            String nodeIdstr = properties.getProperty(nodeKey);
-//            NodeId nodeId = new NodeId(nodeIdstr);
-//
-//            String ipKey = commonPrefix + i + ipSuffix;
-//            String ip = properties.getProperty(ipKey);
-//
-//            String portKey = commonPrefix + i + portSuffix;
-//            int port = Integer.parseInt(properties.getProperty(portKey));
-//
-//            NodeEndpoint nodeEndpoint = new NodeEndpoint(nodeId, new Endpoint(ip, port));
-//            GroupMember member = new GroupMember(nodeEndpoint);
-//
-//            nodeGroup.addGroupMember(nodeId, member);
-//
-//        }
-//        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
-//        for (GroupMember member : allGroupMember) {
-//            System.out.println(member);
-//        }
-//
-//    }
-//    @Before
-//    public void initOther() throws IOException {
-//        config = new DefaultConfigLoader().load(null);
-//        channelGroup = new ChannelGroup(selfNodeId);
-//        logStore = new FileLogStore(path);
-//        stateMachine = null;
-//        rpcHandler = new RpcHandlerImpl(channelGroup, selfPort, config.getConnectTimeout());
-//        defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
-//        SingleThreadTaskScheduler scheduler = new SingleThreadTaskScheduler(config.getMinElectionTimeout(),
-//                config.getMaxElectionTimeout(), config.getLogReplicationResultTimeout());
-//        node = new NodeImpl(nodeGroup, rpcHandler, scheduler, defaultLog, config, selfNodeId);
-//
-//
-//    }
     @Before
     public void builder() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
-        config.setPort(9991);
-        config.setPath(config.getPath() + config.getSelfId().getValue());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft3.json"), ClusterConfig.class);
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        node = builder.justBuild(config, new DefaultStateMachine());
+        node = builder.withId("C")
+                .withListenPort(config.getPort())
+                .withLogReplicationInterval(config.getLogReplicationInterval())
+                .withNodeList(config.getMembers())
+                .withPath(config.getPath() + "C/")
+                .withStateMachine(new DefaultStateMachine())
+                .build();
     }
     @Test
     public void testLog() {

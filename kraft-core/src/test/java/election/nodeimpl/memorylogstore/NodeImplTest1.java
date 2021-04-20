@@ -97,7 +97,7 @@ public class NodeImplTest1 {
     public void builder() throws IOException {
         ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
         config.setPort(9992);
-        config.setPath(config.getPath() + config.getSelfId().getValue());
+        config.setPath(config.getPath() + config.getSelfId().getValue() + "/");
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
         node = builder.justBuild(config, new DefaultStateMachine());
     }

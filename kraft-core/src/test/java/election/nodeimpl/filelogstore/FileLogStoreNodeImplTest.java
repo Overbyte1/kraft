@@ -34,76 +34,29 @@ import java.util.concurrent.*;
 public class FileLogStoreNodeImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
     private Node node;
-//    @Before
-//    public void initNodeGroup() throws IOException {
-//        nodeGroup = new NodeGroup();
-//
-//        int seq = 1, memberNum = 5;
-//        String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
-//        String selfIdName = "self_id", selfPortName = "self_port";
-//        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member1.properties");
-//        Properties properties = new Properties();
-//        properties.load(inputStream);
-//
-//        selfNodeId = new NodeId(properties.getProperty(selfIdName));
-//        id = properties.getProperty(selfIdName);
-//        selfPort = Integer.parseInt(properties.getProperty(selfPortName));
-//        //nodeGroup
-//        for(int i = 1; i <= memberNum; i++) {
-//            if(i == seq) continue;
-//            String nodeKey = commonPrefix + i + idSuffix;
-//            String nodeIdstr = properties.getProperty(nodeKey);
-//            NodeId nodeId = new NodeId(nodeIdstr);
-//
-//            String ipKey = commonPrefix + i + ipSuffix;
-//            String ip = properties.getProperty(ipKey);
-//
-//            String portKey = commonPrefix + i + portSuffix;
-//            int port = Integer.parseInt(properties.getProperty(portKey));
-//
-//            NodeEndpoint nodeEndpoint = new NodeEndpoint(nodeId, new Endpoint(ip, port));
-//            GroupMember member = new GroupMember(nodeEndpoint);
-//
-//            nodeGroup.addGroupMember(nodeId, member);
-//
-//        }
-//        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
-//        for (GroupMember member : allGroupMember) {
-//            System.out.println(member);
-//        }
-//
-//    }
-//    @Before
-//    public void initOther() throws IOException {
-//        config = new DefaultConfigLoader().load(null);
-//        channelGroup = new ChannelGroup(selfNodeId);
-//        //替换成FileLogStore
-//        logStore = new FileLogStore(path);
-//        stateMachine = null;
-//        rpcHandler = new RpcHandlerImpl(channelGroup, selfPort, config.getConnectTimeout());
-//        defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
-//        SingleThreadTaskScheduler scheduler = new SingleThreadTaskScheduler(config.getMinElectionTimeout(),
-//                config.getMaxElectionTimeout(), config.getLogReplicationResultTimeout());
-//        node = new NodeImpl(nodeGroup, rpcHandler, scheduler, defaultLog, config, selfNodeId);
-//
-//    }
+
 
     @Before
     public void builder() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
-        config.setPort(9991);
-        config.setPath(config.getPath() + config.getSelfId().getValue());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft1.json"), ClusterConfig.class);
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        node = builder.justBuild(config, new DefaultStateMachine());
+        node = builder.withId("A")
+                .withListenPort(config.getPort())
+                .withLogReplicationInterval(config.getLogReplicationInterval())
+                .withNodeList(config.getMembers())
+                .withPath(config.getPath() + "A/")
+                .withStateMachine(new DefaultStateMachine())
+                .build();
+        //TODO:重启后commitIndex无法推进到最新，replicationState的更新存在bug
     }
     @Test
     public void testLog() {
         //rpcHandler.initialize();
         node.start();
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(()-> {
-            node.appendLog(new byte[]{0, 1, 2, 3, 4});
-        }, 0, 5, TimeUnit.SECONDS);
+//        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+//        executor.scheduleAtFixedRate(()-> {
+//            node.appendLog(new byte[]{0, 1, 2, 3, 4});
+//        }, 0, 5, TimeUnit.SECONDS);
         waiting();
     }
     private void waiting() {

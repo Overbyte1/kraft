@@ -1,9 +1,12 @@
 {
   "minElectionTimeout": 6000,
-  "maxElectionTimeout": 10000,
+  "maxElectionTimeout": 9000,
   "logReplicationInterval": 1000,
   "logReplicationResultTimeout": 4000,
   "connectTimeout": 4000,
+
+  "maxDataFileSize": 1024,
+  "bufferSize": 8096,
   "maxTransportEntries": -1,
   "path": "./data/node",
 

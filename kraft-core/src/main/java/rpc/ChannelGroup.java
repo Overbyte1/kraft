@@ -53,12 +53,12 @@ public class ChannelGroup {
         NioChannel channel = channelMap.get(nodeId);
         return channel != null && channel.isActive();
     }
-    public void connectAndWriteMessage(NodeEndpoint nodeEndpoint, Object message, long connectTimeout, TimeUnit timeUnit) {
+    public void connectAndWriteMessage(NodeEndpoint nodeEndpoint, Object message, long connectTimeout, long sendTimeout) {
         NodeId nodeId = nodeEndpoint.getNodeId();
         if(isConnect(nodeId)) {
             NioChannel channel = getChannel(nodeId);
             //channel.writeMessage(message);
-            writeMessage(nodeId, message);
+            writeMessage(nodeId, message, sendTimeout);
             return;
         }
         Endpoint endpoint = nodeEndpoint.getEndpoint();
@@ -67,11 +67,11 @@ public class ChannelGroup {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
                 //TODO:需要等待发送selfId后才能发送消息
-                future.await(connectTimeout, timeUnit);
+                future.await(connectTimeout, TimeUnit.MILLISECONDS);
                 if(future.isSuccess()) {
                     logger.debug("succeed to connect node {}, address: {}", nodeId, endpoint);
                     addChannel(nodeId, new NioChannel(channelFuture.channel()));
-                    writeMessage(nodeId, message);
+                    writeMessage(nodeId, message, sendTimeout);
                 } else {
                     logger.info("connect timeout, remote node is {}, endpoint is {}, cancel connection", nodeId, endpoint);
                     future.cancel(true);
@@ -79,11 +79,21 @@ public class ChannelGroup {
             }
         });
     }
-    public void writeMessage(NodeId nodeId, Object message) {
+    public void writeMessage(NodeId nodeId, Object message, long sendTimeout) {
         AbstractMessage abstractMessage = new AbstractMessage(0, selfId, message);
         NioChannel channel = channelMap.get(nodeId);
         if(isConnect(nodeId)) {
-            channel.writeMessage(abstractMessage);
+            ChannelFuture future = channel.writeMessage(abstractMessage);
+            future.addListener(new GenericFutureListener<Future<? super Void>>() {
+                @Override
+                public void operationComplete(Future<? super Void> future) throws Exception {
+                    future.await(sendTimeout, TimeUnit.MILLISECONDS);
+                    if(!future.isSuccess()) {
+                        future.cancel(false);
+                        logger.info("fail to send message: send timeout, exceed {} ms", sendTimeout);
+                    }
+                }
+            });
             logger.debug("send {}", abstractMessage);
         } else {
             removeChannel(nodeId);
@@ -161,7 +171,7 @@ public class ChannelGroup {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logger.warn("exception Caught: {}" + cause.getMessage());
-            cause.printStackTrace();
+            //cause.printStackTrace();
             ctx.close();
             //TODO:从map中移除channel
 //            super.exceptionCaught(ctx, cause);

@@ -1,6 +1,5 @@
 package rpc;
 
-import election.config.GlobalConfig;
 import election.node.NodeId;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -23,7 +22,6 @@ import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 
 public class RpcHandlerImpl implements RpcHandler {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImpl.class);
@@ -32,14 +30,25 @@ public class RpcHandlerImpl implements RpcHandler {
 
     private ChannelGroup channelGroup;
     private static final long DEFAULT_CONNECT_TIMEOUT = 5000;
+    private static final long DEFAULT_SEND_TIMEOUT = 3000;
 
     private final int port;
     private long connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    private long sendTimeout = DEFAULT_SEND_TIMEOUT;
+    private NodeId selfId;
 
-    public RpcHandlerImpl(ChannelGroup channelGroup, int port, long connectTimeout) {
+//    private final int NCPU = Runtime.getRuntime().availableProcessors();
+//    private final int taskQueueSize = 10000;
+//    private final long keepAliveTime = 100;
+//
+//    private final Executor executor = new ThreadPoolExecutor(NCPU, NCPU * 2, keepAliveTime,
+//            TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(taskQueueSize));
+
+    public RpcHandlerImpl(ChannelGroup channelGroup, int port, long connectTimeout, NodeId selfId) {
         this.channelGroup = channelGroup;
         this.port = port;
         this.connectTimeout = connectTimeout;
+        this.selfId = selfId;
         //initialize();
     }
     public RpcHandlerImpl(ChannelGroup channelGroup, int port) {
@@ -81,9 +90,10 @@ public class RpcHandlerImpl implements RpcHandler {
     public void sendRequestVoteMessage(RequestVoteMessage message, Collection<NodeEndpoint> nodeEndpoints) {
         //RequestVoteMessage message = new RequestVoteMessage(term, candidateId, lastLogIndex, lastLogTerm);
         //发送给其他所有节点
-        //TODO:异步发送，避免因为一个连接出现问题导致阻塞从而无法发送消息给其他节点，并且需要设置超时时间
         for (NodeEndpoint nodeEndpoint : nodeEndpoints) {
-            sendMessage(nodeEndpoint, message);
+            if(!selfId.equals(nodeEndpoint.getNodeId())) {
+                sendMessage(nodeEndpoint, message);
+            }
         }
 
     }
@@ -97,7 +107,9 @@ public class RpcHandlerImpl implements RpcHandler {
     public void sendAppendEntriesMessage(AppendEntriesMessage message, Collection<NodeEndpoint> nodeEndpoints) {
         //AppendEntriesMessage message = new AppendEntriesMessage(term, leaderId, preLogTerm, preLogIndex, logEntryList);
         for (NodeEndpoint nodeEndpoint : nodeEndpoints) {
-            sendMessage(nodeEndpoint, message);
+            if(!selfId.equals(nodeEndpoint.getNodeId())) {
+                sendMessage(nodeEndpoint, message);
+            }
         }
     }
 
@@ -112,23 +124,22 @@ public class RpcHandlerImpl implements RpcHandler {
         //AppendEntriesResultMessage message = new AppendEntriesResultMessage(term, success);
         sendMessage(nodeEndpoint, message);
     }
+//    private void sendMessage(NodeEndpoint nodeEndpoint, Object message) {
+//        executor.execute(()->{doSendMessage(nodeEndpoint, message);});
+//    }
     private void sendMessage(NodeEndpoint nodeEndpoint, Object message) {
         NodeId nodeId = nodeEndpoint.getNodeId();
         try {
             if(channelGroup.isConnect(nodeId)) {
-                channelGroup.writeMessage(nodeId, message);
+                channelGroup.writeMessage(nodeId, message, sendTimeout);
                 return;
             }
-            channelGroup.connectAndWriteMessage(nodeEndpoint, message, connectTimeout, TimeUnit.MILLISECONDS);
+            channelGroup.connectAndWriteMessage(nodeEndpoint, message, connectTimeout, sendTimeout);
         } catch (Exception exception) {
             logger.warn("fail to send message to node {}, endpoint is {}, cause is {}",
                     nodeId, nodeEndpoint.getEndpoint(), exception.getMessage());
             exception.printStackTrace();
         }
-    }
-
-    public static Logger getLogger() {
-        return logger;
     }
 
     public EventLoopGroup getBossGroup() {
