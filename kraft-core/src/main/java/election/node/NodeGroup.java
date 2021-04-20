@@ -5,12 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class NodeGroup {
-    //TODO:添加自身节点
     private Map<NodeId, GroupMember> nodesMap = new HashMap<>();
-
-    public Map<NodeId, GroupMember> getNodesMap() {
-        return nodesMap;
-    }
 
     public int getSize() {
         return nodesMap.size();

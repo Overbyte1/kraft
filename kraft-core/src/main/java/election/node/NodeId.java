@@ -6,8 +6,8 @@ import java.util.UUID;
 public class NodeId implements Serializable, Comparable<NodeId> {
     private String value;
 
-    public NodeId(String val) {
-        value = val;
+    public NodeId(String value) {
+        this.value = value;
     }
 
     /**
@@ -39,6 +39,14 @@ public class NodeId implements Serializable, Comparable<NodeId> {
         return "NodeId{" +
                 "value='" + value + '\'' +
                 '}';
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
     }
 
     @Override

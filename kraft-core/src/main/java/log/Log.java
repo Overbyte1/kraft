@@ -48,7 +48,7 @@ public interface Log {
     RequestVoteMessage createRequestVoteMessage(NodeId candidateId, long term);
 
     /**
-     * 附加空的日志（心跳消息），TODO：可能需要移除
+     * 附加空的日志（心跳消息）
      * @param term
      * @return
      */

@@ -1,10 +1,12 @@
 package election.nodeimpl.filelogstore;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import config.ClusterConfig;
+import config.DefaultConfigLoader;
 import election.config.GlobalConfig;
-import election.node.GroupMember;
-import election.node.NodeGroup;
-import election.node.NodeId;
-import election.node.NodeImpl;
+import election.node.*;
+import election.statemachine.DefaultStateMachine;
 import election.statemachine.StateMachine;
 import log.Log;
 import log.LogImpl;
@@ -21,6 +23,8 @@ import rpc.RpcHandlerImpl;
 import rpc.requestvote.RpcHandlerImplTest;
 import schedule.SingleThreadTaskScheduler;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -29,65 +33,68 @@ import java.util.concurrent.*;
 
 public class FileLogStoreNodeImplTest {
     private static final Logger logger = LoggerFactory.getLogger(RpcHandlerImplTest.class);
-    private String path = "./data/node0/";
-    private int selfPort;
-    private NodeId selfNodeId;
-    private ChannelGroup channelGroup;
-    private RpcHandlerImpl rpcHandler;
-    private NodeImpl node;
-    private LogStore logStore;
-    private StateMachine stateMachine;
-    private NodeGroup nodeGroup;
-    private Log defaultLog;
+    private Node node;
+//    @Before
+//    public void initNodeGroup() throws IOException {
+//        nodeGroup = new NodeGroup();
+//
+//        int seq = 1, memberNum = 5;
+//        String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
+//        String selfIdName = "self_id", selfPortName = "self_port";
+//        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member1.properties");
+//        Properties properties = new Properties();
+//        properties.load(inputStream);
+//
+//        selfNodeId = new NodeId(properties.getProperty(selfIdName));
+//        id = properties.getProperty(selfIdName);
+//        selfPort = Integer.parseInt(properties.getProperty(selfPortName));
+//        //nodeGroup
+//        for(int i = 1; i <= memberNum; i++) {
+//            if(i == seq) continue;
+//            String nodeKey = commonPrefix + i + idSuffix;
+//            String nodeIdstr = properties.getProperty(nodeKey);
+//            NodeId nodeId = new NodeId(nodeIdstr);
+//
+//            String ipKey = commonPrefix + i + ipSuffix;
+//            String ip = properties.getProperty(ipKey);
+//
+//            String portKey = commonPrefix + i + portSuffix;
+//            int port = Integer.parseInt(properties.getProperty(portKey));
+//
+//            NodeEndpoint nodeEndpoint = new NodeEndpoint(nodeId, new Endpoint(ip, port));
+//            GroupMember member = new GroupMember(nodeEndpoint);
+//
+//            nodeGroup.addGroupMember(nodeId, member);
+//
+//        }
+//        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
+//        for (GroupMember member : allGroupMember) {
+//            System.out.println(member);
+//        }
+//
+//    }
+//    @Before
+//    public void initOther() throws IOException {
+//        config = new DefaultConfigLoader().load(null);
+//        channelGroup = new ChannelGroup(selfNodeId);
+//        //替换成FileLogStore
+//        logStore = new FileLogStore(path);
+//        stateMachine = null;
+//        rpcHandler = new RpcHandlerImpl(channelGroup, selfPort, config.getConnectTimeout());
+//        defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
+//        SingleThreadTaskScheduler scheduler = new SingleThreadTaskScheduler(config.getMinElectionTimeout(),
+//                config.getMaxElectionTimeout(), config.getLogReplicationResultTimeout());
+//        node = new NodeImpl(nodeGroup, rpcHandler, scheduler, defaultLog, config, selfNodeId);
+//
+//    }
+
     @Before
-    public void initNodeGroup() throws IOException {
-        nodeGroup = new NodeGroup();
-
-        int seq = 1, memberNum = 5;
-        String commonPrefix = "node", idSuffix = "_nodeId", ipSuffix = "_ip", portSuffix = "_port";
-        String selfIdName = "self_id", selfPortName = "self_port";
-        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cluster-member1.properties");
-        Properties properties = new Properties();
-        properties.load(inputStream);
-
-        selfNodeId = new NodeId(properties.getProperty(selfIdName));
-        selfPort = Integer.parseInt(properties.getProperty(selfPortName));
-        //nodeGroup
-        for(int i = 1; i <= memberNum; i++) {
-            if(i == seq) continue;
-            String nodeKey = commonPrefix + i + idSuffix;
-            String nodeIdstr = properties.getProperty(nodeKey);
-            NodeId nodeId = new NodeId(nodeIdstr);
-
-            String ipKey = commonPrefix + i + ipSuffix;
-            String ip = properties.getProperty(ipKey);
-
-            String portKey = commonPrefix + i + portSuffix;
-            int port = Integer.parseInt(properties.getProperty(portKey));
-
-            NodeEndpoint nodeEndpoint = new NodeEndpoint(nodeId, new Endpoint(ip, port));
-            GroupMember member = new GroupMember(nodeEndpoint);
-
-            nodeGroup.addGroupMember(nodeId, member);
-
-        }
-        Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
-        for (GroupMember member : allGroupMember) {
-            System.out.println(member);
-        }
-
-    }
-    @Before
-    public void initOther() throws IOException {
-        channelGroup = new ChannelGroup(selfNodeId);
-        //替换成FileLogStore
-        logStore = new FileLogStore(path);
-        stateMachine = null;
-        rpcHandler = new RpcHandlerImpl(channelGroup, selfPort);
-        defaultLog = new LogImpl(logStore, stateMachine, 0, nodeGroup);
-        node = new NodeImpl(nodeGroup, rpcHandler, new SingleThreadTaskScheduler(), defaultLog,
-                new GlobalConfig(), selfNodeId);
-
+    public void builder() throws IOException {
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
+        config.setPort(9991);
+        config.setPath(config.getPath() + config.getSelfId().getValue());
+        NodeImpl.NodeBuilder builder = NodeImpl.builder();
+        node = builder.justBuild(config, new DefaultStateMachine());
     }
     @Test
     public void testLog() {
@@ -105,12 +112,5 @@ public class FileLogStoreNodeImplTest {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
-    @Test
-    public void testU() throws InterruptedException {
-        Semaphore semaphore = null;
-    }
-    private int fun(int a, int b) {
-        return 0;
     }
 }

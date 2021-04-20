@@ -24,10 +24,10 @@ public class SocketChannelImpl implements SocketChannel {
     private Lock lock;
     private Condition condition;
     private ReadHandler readHandler;
-    //TODO:配置
-    private long timeout = 5000;
+    private long sendTimeout = 5000;
 
-    public SocketChannelImpl() {
+    public SocketChannelImpl(long timeout) {
+        this.sendTimeout = timeout;
         ip = null;
         port = 0;
         channel = null;
@@ -47,7 +47,7 @@ public class SocketChannelImpl implements SocketChannel {
         channel.writeAndFlush(msg);
         try {
             lock.lock();
-            condition.await(timeout, TimeUnit.MILLISECONDS);
+            condition.await(sendTimeout, TimeUnit.MILLISECONDS);
             Object message =  readHandler.getAndResetMessage();
             if(message != null) {
                 return message;
@@ -57,7 +57,7 @@ public class SocketChannelImpl implements SocketChannel {
         } finally {
             lock.unlock();
         }
-        throw new SendTimeoutException("send timeout, send time exceed " + timeout + " milliseconds");
+        throw new SendTimeoutException("send timeout, send time exceed " + sendTimeout + " milliseconds");
     }
 
     private void connect(String ip, int port) {
@@ -78,7 +78,7 @@ public class SocketChannelImpl implements SocketChannel {
                                 .addLast(new LoggingHandler(LogLevel.INFO));
                     }
                 });
-        ChannelFuture future = null;
+        ChannelFuture future;
         try {
             future = bootstrap.connect(ip, port).sync();
             channel = future.channel();

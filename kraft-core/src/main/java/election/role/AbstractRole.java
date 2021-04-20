@@ -5,6 +5,7 @@ import election.node.NodeId;
 import election.node.NodeIdGenerator;
 
 import java.util.List;
+import java.util.Objects;
 
 public abstract class AbstractRole {
     //节点ID
@@ -18,8 +19,6 @@ public abstract class AbstractRole {
     private long currentTerm;
     //投票给的那个节点
     private NodeId voteFor;
-    //所有日志，TODO：考虑持久化
-    private List<GeneralEntry> generalEntryList;
 
     /*易失性数据*/
     //已知已提交的最高的日志条目的索引（初始值为0，单调递增）
@@ -43,8 +42,6 @@ public abstract class AbstractRole {
         this.roleType = roleType;
         this.currentTerm = currentTerm;
         this.voteFor = voteFor;
-
-        //TODO：logEntryList初始化
     }
 
 
@@ -80,35 +77,19 @@ public abstract class AbstractRole {
         this.voteFor = voteFor;
     }
 
-    public List<GeneralEntry> getGeneralEntryList() {
-        return generalEntryList;
-    }
-
-    public void setGeneralEntryList(List<GeneralEntry> generalEntryList) {
-        this.generalEntryList = generalEntryList;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         AbstractRole role = (AbstractRole) o;
-
-        if (currentTerm != role.currentTerm) return false;
-        if (nodeId != null ? !nodeId.equals(role.nodeId) : role.nodeId != null) return false;
-        if (roleType != role.roleType) return false;
-        if (voteFor != null ? !voteFor.equals(role.voteFor) : role.voteFor != null) return false;
-        return generalEntryList != null ? generalEntryList.equals(role.generalEntryList) : role.generalEntryList == null;
+        return currentTerm == role.currentTerm &&
+                Objects.equals(nodeId, role.nodeId) &&
+                roleType == role.roleType &&
+                Objects.equals(voteFor, role.voteFor);
     }
 
     @Override
     public int hashCode() {
-        int result = nodeId != null ? nodeId.hashCode() : 0;
-        result = 31 * result + (roleType != null ? roleType.hashCode() : 0);
-        result = 31 * result + (int) (currentTerm ^ (currentTerm >>> 32));
-        result = 31 * result + (voteFor != null ? voteFor.hashCode() : 0);
-        result = 31 * result + (generalEntryList != null ? generalEntryList.hashCode() : 0);
-        return result;
+        return Objects.hash(nodeId, roleType, currentTerm, voteFor);
     }
 }

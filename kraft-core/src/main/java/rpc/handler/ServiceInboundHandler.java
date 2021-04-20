@@ -42,7 +42,6 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
         AbstractMessage abstractMessage = (AbstractMessage) msg;
         Object messageBody = abstractMessage.getBody();
         logger.debug("receive message from {}, message: {}", abstractMessage.getNodeId(), abstractMessage);
-        //TODO：根据消息类型选择处理器
         MessageHandler handler = handlerMap.get(messageBody.getClass());
         if (handler == null) {
             logger.warn("Handler not found, msg = {}", msg);

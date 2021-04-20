@@ -4,9 +4,10 @@ import common.codec.FrameDecoder;
 import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
-import common.message.*;
-import common.message.command.*;
+import common.message.Connection;
+import common.message.command.ModifiedCommand;
 import common.message.response.*;
+import config.ClusterConfig;
 import election.node.Node;
 import election.statemachine.StateMachine;
 import io.netty.bootstrap.ServerBootstrap;
@@ -20,13 +21,15 @@ import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rpc.NodeEndpoint;
+import server.config.ServerConfig;
 import server.handler.CommandHandler;
 import server.store.KVStore;
+import server.store.MemHTKVStore;
 import utils.SerializationUtil;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class KVDatabaseImpl implements KVDatabase {
     private static final Logger logger = LoggerFactory.getLogger(KVDatabaseImpl.class);
@@ -38,17 +41,51 @@ public class KVDatabaseImpl implements KVDatabase {
      */
     private final Node node;
     private final Map<String, Connection> connectorMap = new ConcurrentHashMap<>();
-    private final Map<Class, CommandHandler> handlerMap = new HashMap<>();
+    private final Map<String, Future<?>> futureMap = new ConcurrentHashMap<>();
+    private final Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
     private final StateMachine stateMachine = new DefaultStateMachine();
 
-    private KVStore kvStore;
+    private final int NCPU = Runtime.getRuntime().availableProcessors() * 2;
 
-    //TODO：配置
-    private final int port = 8848;
+    private final ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(NCPU,
+            (Runnable r)-> new Thread(r, "TimeoutTaskThread"));
 
-    public KVDatabaseImpl(Node node, KVStore kvStore) {
+    //private final KVStore kvStore;
+
+    private final ServerConfig config;
+
+
+    //    private class CleanTask implements Runnable{
+//        final String requestId;
+//
+//        public CleanTask(String requestId) {
+//            this.requestId = requestId;
+//        }
+//
+//        @Override
+//        public void run() {
+//            connectorMap.remove(requestId);
+//        }
+//    }
+    private class TimeoutResponseTask implements Runnable {
+        final String requestId;
+
+        public TimeoutResponseTask(String requestId) {
+            this.requestId = requestId;
+        }
+
+        @Override
+        public void run() {
+            connectorMap.get(requestId)
+                    .reply(new Response(ResponseType.FAILURE, new NoPayloadResult(StatusCode.FAIL_TIMEOUT)));
+            connectorMap.remove(requestId);
+            logger.warn("execution timeout, response client");
+        }
+    }
+
+    public KVDatabaseImpl(Node node, ServerConfig config) {
         this.node = node;
-        this.kvStore = kvStore;
+        this.config = config;
         node.registerStateMachine(stateMachine);
     }
 
@@ -64,7 +101,7 @@ public class KVDatabaseImpl implements KVDatabase {
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
+                    protected void initChannel(NioSocketChannel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(new FrameDecoder())
                                 .addLast(new FrameEncoder())
@@ -75,12 +112,12 @@ public class KVDatabaseImpl implements KVDatabase {
                     }
                 });
         try {
-            serverBootstrap.bind(port).sync();
+            serverBootstrap.bind(config.getPort()).sync();
             logger.info("server was started");
         } catch (InterruptedException e) {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
-            logger.error("fail to start server, cause is: ", e.getMessage());
+            logger.error("fail to start server, cause is: {}", e.getMessage());
             //e.printStackTrace();
         }
 
@@ -111,9 +148,14 @@ public class KVDatabaseImpl implements KVDatabase {
         }
         Object command = connection.getCommand();
         if(command instanceof ModifiedCommand) {
-            connectorMap.put(((ModifiedCommand) command).getRequestId(), connection);
+            String requestId = ((ModifiedCommand) command).getRequestId();
+            connectorMap.put(requestId, connection);
+            ScheduledFuture<?> future = scheduledExecutor.schedule(new TimeoutResponseTask(requestId),
+                    config.getExecuteTimeout(), TimeUnit.MILLISECONDS);
+
+            futureMap.put(requestId, future);
         }
-        Response response = handlerMap.get(command.getClass()).handleCommand(command);
+        Response<?> response = handlerMap.get(command.getClass()).handleCommand(command);
         if(response != null) {
             connection.reply(response);
         }
@@ -129,25 +171,10 @@ public class KVDatabaseImpl implements KVDatabase {
         handlerMap.remove(clazz);
     }
 
-    private void doSet(SetCommand setCommand) {
-        kvStore.set(setCommand.getKey(), setCommand.getValue());
-        logger.debug("key/value [{}/{}] was set", setCommand.getKey(), new String(setCommand.getValue()));
-        connectorMap.get(setCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
-                new SinglePayloadResult(StatusCode.SUCCEED_OK)));
-        connectorMap.remove(setCommand.getRequestId());
-    }
-    private void doDel(DelCommand delCommand) {
-        kvStore.del(delCommand.getKey());
-        logger.debug("key [{}] was deleted", delCommand.getKey());
-        connectorMap.get(delCommand.getRequestId()).reply(new Response(ResponseType.SUCCEED,
-                new SinglePayloadResult(StatusCode.SUCCEED_OK)));
-        connectorMap.remove(delCommand.getRequestId());
-    }
-
     private class DefaultStateMachine implements StateMachine {
         @Override
         public boolean apply(byte[] command) {
-            Object obj = null;
+            Object obj;
             try {
                 obj = SerializationUtil.decode(command);
             } catch (Exception e) {
@@ -156,9 +183,15 @@ public class KVDatabaseImpl implements KVDatabase {
             }
             ModifiedCommand modifiedCommand = (ModifiedCommand) obj;
             String requestId = modifiedCommand.getRequestId();
-            Response response = handlerMap.get(modifiedCommand.getClass()).doHandle(modifiedCommand);
-            connectorMap.get(requestId).reply(response);
-            connectorMap.remove(requestId);
+            Response<?> response = handlerMap.get(modifiedCommand.getClass()).doHandle(modifiedCommand);
+            try {
+                connectorMap.get(requestId).reply(response);
+                connectorMap.remove(requestId);
+                futureMap.get(requestId).cancel(false);
+                futureMap.remove(requestId);
+            } catch (Exception exception) {
+                logger.warn("fail to response client, because channel was not found. requestId is: {}", requestId);
+            }
             return true;
         }
 

@@ -1,18 +1,21 @@
 package client;
 
 import client.balance.PollingLoadBalance;
+import client.config.ClientConfig;
+import client.config.ClientConfigLoader;
 import client.handler.*;
 import election.node.NodeId;
 import org.junit.Test;
 import rpc.Endpoint;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
 
 public class ConsoleTest {
     @Test
-    public void testStart() {
+    public void testStart() throws IOException {
         List<CommandHandler> handlers = Arrays.asList(
                 new DelHandler(),
                 new ExitCommand(),
@@ -29,8 +32,8 @@ public class ConsoleTest {
 //        endpointMap.put(new NodeId("A"), new Endpoint("1111111111111", 1234));
 //        endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
 //        endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
-
-        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap));
+        ClientConfig config = new ClientConfigLoader().load(null);
+        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap, config), config);
         console.start();
     }
     @Test
@@ -40,7 +43,7 @@ public class ConsoleTest {
         System.out.println("s = " + s);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         ConsoleTest consoleTest = new ConsoleTest();
         consoleTest.testStart();
     }

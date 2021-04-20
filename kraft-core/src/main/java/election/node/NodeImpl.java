@@ -81,7 +81,12 @@ public class NodeImpl implements Node {
         this.currentNodeId = currentNodeId;
         this.logReplicationInterval = logReplicationInterval;
     }
-    private static class NodeBuilder {
+
+    public static NodeBuilder builder() {
+        return new NodeBuilder();
+    }
+
+    public static class NodeBuilder {
         private NodeId nodeId;
         private NodeGroup nodeGroup;
         private RpcHandler rpcHandler;
@@ -99,11 +104,11 @@ public class NodeImpl implements Node {
             this.nodeId = new NodeId(id);
             return this;
         }
-
-        public NodeBuilder withLog(Log log) {
-            this.log = log;
+        public NodeBuilder withId(NodeId nodeId) {
+            this.nodeId = nodeId;
             return this;
         }
+
         public NodeBuilder withNodeList(List<NodeEndpoint> nodeList) {
             nodeGroup = new NodeGroup();
             for (NodeEndpoint nodeEndpoint : nodeList) {
@@ -116,11 +121,22 @@ public class NodeImpl implements Node {
             this.stateMachine = stateMachine;
             return this;
         }
-        public NodeBuilder withConfig(ClusterConfig config) throws IOException {
-            this.config = config;
-            taskScheduler = new SingleThreadTaskScheduler(config.getMinElectionTimeout(), config.getMaxElectionTimeout(),
+        public NodeBuilder withElectionTimeout(int minElectionTimeout, int maxElectionTimeout) {
+            assert(minElectionTimeout > 0 && maxElectionTimeout > 0 && maxElectionTimeout >= minElectionTimeout);
+
+            taskScheduler = new SingleThreadTaskScheduler(minElectionTimeout, maxElectionTimeout,
                     config.getLogReplicationResultTimeout());
-            logStore = new FileLogStore(config.getPath());
+            return this;
+        }
+        public NodeBuilder withPath(String path) throws IOException {
+            logStore = new FileLogStore(path);
+            return this;
+        }
+
+        public Node build() {
+            if(nodeGroup == null) {
+                throw new IncompleteArgumentException("node list was not set"   );
+            }
             if(stateMachine == null) {
                 throw new IncompleteArgumentException("StateMachine was not set");
             }
@@ -133,18 +149,15 @@ public class NodeImpl implements Node {
             log = new LogImpl(logStore, stateMachine, nodeGroup);
             ChannelGroup channelGroup = new ChannelGroup(nodeId);
             rpcHandler = new RpcHandlerImpl(channelGroup, config.getPort(), config.getConnectTimeout());
-
-            return this;
-        }
-        public Node build() {
-            if(nodeGroup == null) {
-                throw new IncompleteArgumentException("node list was not set"   );
-            }
-            if(rpcHandler == null) {
-                throw new IncompleteArgumentException("ClusterConfig was not set");
-            }
-
             return new NodeImpl(nodeGroup, rpcHandler, taskScheduler, log, nodeId, config.getLogReplicationInterval());
+        }
+        public Node justBuild(ClusterConfig config, StateMachine stateMachine) throws IOException {
+            return withId(config.getSelfId())
+                    .withStateMachine(stateMachine)
+                    .withNodeList(config.getMembers())
+                    .withElectionTimeout(config.getMinElectionTimeout(), config.getMaxElectionTimeout())
+                    .withPath(config.getPath())
+                    .build();
         }
     }
 

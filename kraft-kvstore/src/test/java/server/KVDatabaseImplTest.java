@@ -19,10 +19,12 @@ import org.junit.Before;
 import org.junit.Test;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
+import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
 
+import java.io.IOException;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
@@ -36,9 +38,9 @@ public class KVDatabaseImplTest {
     private TestHandle testHandle = new TestHandle(cyclicBarrier);
     private KVStore kvStore = new MemHTKVStore();
     @Before
-    public void init() {
+    public void init() throws IOException {
         node = new NodeMock();
-        kvDatabase = new KVDatabaseImpl(node, new MemHTKVStore());
+        kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
         kvDatabase.start();
         kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));

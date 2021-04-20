@@ -1,14 +1,16 @@
 package client;
 
 import client.balance.PollingLoadBalance;
+import client.config.ClientConfig;
+import client.config.ClientConfigLoader;
 import client.handler.*;
 import election.node.NodeId;
 import rpc.Endpoint;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.*;
 
 public class ConsoleLaunch {
     public static void main(String[] args) {
@@ -29,7 +31,18 @@ public class ConsoleLaunch {
         endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
         endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
 
-        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap));
+        Console console = null;
+        try {
+//            Properties properties = new Properties();
+//            properties.load(ConsoleLaunch.class.getClassLoader().getResourceAsStream("./conf/client.properties"));
+//            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//            properties.store(outputStream, "");
+            ClientConfig config = new ClientConfigLoader().load(null);
+            console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap, config), config);
+        } catch (IOException e) {
+            System.out.println("fail to start console");
+            e.printStackTrace();
+        }
         console.start();
     }
 }

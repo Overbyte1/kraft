@@ -1,5 +1,6 @@
 package schedule;
 
+import config.ClusterConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,23 +12,29 @@ import java.util.concurrent.TimeUnit;
 
 public class SingleThreadTaskScheduler implements TaskScheduler {
     private static final Logger logger = LoggerFactory.getLogger(SingleThreadTaskScheduler.class);
-    //TODO:配置类
-    private int minElectionTimeout = 6000;
-    private int maxElectionTimeout = 10000;
-    private int logReplicationInterval = 3000;
-    private int logReplicationResultTimeout = 1500;
-    private int connectTimeout = 800;
+
+    //private final ClusterConfig config;
 
     private final TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+    private final Random random = new Random();
 
     private ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(1);
-    private Random random = new Random();
+    private int minElectionTimeout;
+    private int maxElectionTimeout;
+    private int logReplicationTimeout;
+
+    public SingleThreadTaskScheduler(int minElectionTimeout, int maxElectionTimeout, int logReplicationTimeout) {
+        this.minElectionTimeout = minElectionTimeout;
+        this.maxElectionTimeout = maxElectionTimeout;
+        this.logReplicationTimeout = logReplicationTimeout;
+    }
 
     @Override
     public ElectionTimeoutFuture scheduleElectionTimeoutTask(Runnable task) {
-        //logger.info("election timeout task was commit");
-        System.out.println("election timeout task was commit");
-        int timeout = random.nextInt(maxElectionTimeout - minElectionTimeout) + minElectionTimeout;
+        logger.debug("election timeout task was commit");
+
+        int timeout = random.nextInt(maxElectionTimeout - minElectionTimeout)
+                    + minElectionTimeout;
         ScheduledFuture<?> scheduledFuture =
                 scheduledExecutorService.schedule(task, timeout, timeUnit);
         return new ElectionTimeoutFuture(scheduledFuture);
@@ -35,10 +42,9 @@ public class SingleThreadTaskScheduler implements TaskScheduler {
 
     @Override
     public LogReplicationFuture scheduleLogReplicationTask(Runnable task) {
-        //logger.info("log replication timeout task was commit");
-        System.out.println("log replication timeout task was commit");
+        logger.debug("log replication timeout task was commit");
         ScheduledFuture<?> scheduledFuture =
-                scheduledExecutorService.scheduleWithFixedDelay(task, logReplicationInterval, logReplicationInterval, timeUnit);
+                scheduledExecutorService.scheduleWithFixedDelay(task, logReplicationTimeout, logReplicationTimeout, timeUnit);
         return new LogReplicationFuture(scheduledFuture);
 
     }

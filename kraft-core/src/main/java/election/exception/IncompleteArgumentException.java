@@ -1,4 +1,7 @@
 package election.exception;
 
-public class IncompeleArgumentException {
+public class IncompleteArgumentException extends RuntimeException {
+    public IncompleteArgumentException(String msg) {
+        super(msg);
+    }
 }

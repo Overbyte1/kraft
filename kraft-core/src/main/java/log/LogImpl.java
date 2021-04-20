@@ -21,14 +21,20 @@ public class LogImpl implements Log {
     private static final Logger logger = LoggerFactory.getLogger(LogImpl.class);
     private LogStore logStore;
     private StateMachine stateMachine;
-    private long commitIndex;
+    private long commitIndex = 0;
     private long appliedIndex;
     private NodeGroup nodeGroup;
 
+    //TODO:remove commitIndex
     public LogImpl(LogStore logStore, StateMachine stateMachine, long commitIndex, NodeGroup nodeGroup) {
         this.logStore = logStore;
         this.stateMachine = stateMachine;
         this.commitIndex = commitIndex;
+        this.nodeGroup = nodeGroup;
+    }
+    public LogImpl(LogStore logStore, StateMachine stateMachine, NodeGroup nodeGroup) {
+        this.logStore = logStore;
+        this.stateMachine = stateMachine;
         this.nodeGroup = nodeGroup;
     }
 

@@ -5,9 +5,9 @@
   "logReplicationResultTimeout": 4000,
   "connectTimeout": 4000,
   "maxTransportEntries": -1,
-  "path": "./data/node",
+  "path": "./data/",
 
-  "members":[
+  "members": [
     {"nodeId": {"value": "A"}, "endpoint": {"ipAddress": "localhost", "port": 8888}},
     {"nodeId": {"value": "B"}, "endpoint": {"ipAddress": "localhost", "port": 8888}},
     {"nodeId": {"value": "C"}, "endpoint": {"ipAddress": "localhost", "port": 8888}},
@@ -15,7 +15,7 @@
     {"nodeId": {"value": "E"}, "endpoint": {"ipAddress": "localhost", "port": 8888}}
   ],
 
-  "selfId": "A",
+  "selfId": {"value": "A"},
   "port": 8888,
   "selfIp": "localhost"
 }

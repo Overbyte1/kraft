@@ -14,6 +14,8 @@ public class DefaultConfigLoader implements ConfigLoader {
     private static final int DEFAULT_lOG_REPLICATION_RESULT_TIMEOUT = 4000;
     private static final int DEFAULT_CONNECT_TIMEOUT = 800;
     private static final int DEFAULT_MAX_TRANSPORT_ENTRIES = -1;
+    private static final String DEFAULT_PATH = "./data/";
+    private static final int DEFAULT_PORT = 8888;
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultConfigLoader.class);
 
@@ -30,7 +32,8 @@ public class DefaultConfigLoader implements ConfigLoader {
     @Override
     public ClusterConfig load(InputStream inputStream) throws IOException {
         Properties p = new Properties();
-        p.load(inputStream);
+        if(inputStream != null)
+            p.load(inputStream);
 
         ClusterConfig config = new ClusterConfig();
         config.setMinElectionTimeout(getIntProperty(p, "election.timeout.min", DEFAULT_MIN_ELECTION_TIMEOUT));
@@ -53,19 +56,35 @@ public class DefaultConfigLoader implements ConfigLoader {
         config.setMaxTransportEntries(getIntProperty(p, "log.transport.entry.max", DEFAULT_MAX_TRANSPORT_ENTRIES));
         assert(config.getMaxTransportEntries() >= -1 && config.getMaxTransportEntries() != 0);
 
+        config.setPath(getStringProperty(p, "log.data.path", DEFAULT_PATH));
+
+        config.setPort(getIntProperty(p, "network.port", DEFAULT_PORT));
+        assert(config.getPort() > 0);
+
         return config;
     }
 
     private int getIntProperty(Properties properties, String name, int defaultValue) {
-        String value = properties.getProperty(propertyNamePrefix + name);
-        if (value != null) {
-            try {
-                return Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                logger.warn("illegal value [" + value + "] for property " + name +
-                        ", fallback to default value " + defaultValue);
+        try {
+            String value = properties.getProperty(propertyNamePrefix + name);
+            if (value != null) {
+                try {
+                    return Integer.parseInt(value);
+                } catch (NumberFormatException e) {
+                    logger.warn("illegal value [" + value + "] for property " + name +
+                            ", fallback to default value " + defaultValue);
+                }
             }
+        } catch (Exception exception) {
+            exception.printStackTrace();
         }
         return defaultValue;
+    }
+    private String getStringProperty(Properties properties, String name, String defaultValue) {
+        String value = properties.getProperty(name);
+        if(value == null || "".equals(value)) {
+            return defaultValue;
+        }
+        return value;
     }
 }

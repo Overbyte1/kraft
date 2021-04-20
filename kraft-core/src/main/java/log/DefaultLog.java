@@ -107,7 +107,6 @@ public class DefaultLog {
     }
 
     public RequestVoteMessage createRequestVoteMessage(NodeId candidateId, long term) {
-        //TODO:需要保证原子性？
         long lastLogIndex = logStore.getLastLogIndex();
         EntryMeta entryMata = logStore.getEntryMata(lastLogIndex);
 

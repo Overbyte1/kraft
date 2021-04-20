@@ -31,19 +31,24 @@ public class RpcHandlerImpl implements RpcHandler {
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
 
     private ChannelGroup channelGroup;
+    private static final long DEFAULT_CONNECT_TIMEOUT = 5000;
 
-    private int port;
+    private final int port;
+    private long connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
+    public RpcHandlerImpl(ChannelGroup channelGroup, int port, long connectTimeout) {
+        this.channelGroup = channelGroup;
+        this.port = port;
+        this.connectTimeout = connectTimeout;
+        //initialize();
+    }
     public RpcHandlerImpl(ChannelGroup channelGroup, int port) {
         this.channelGroup = channelGroup;
         this.port = port;
-        //initialize();
     }
 
     @Override
     public void initialize() {
-        ServiceInboundHandler serviceInboundHandler = ServiceInboundHandler.getInstance();
-
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
@@ -114,9 +119,7 @@ public class RpcHandlerImpl implements RpcHandler {
                 channelGroup.writeMessage(nodeId, message);
                 return;
             }
-            //TODO:remove ti
-            GlobalConfig config = new GlobalConfig();
-            channelGroup.connectAndWriteMessage(nodeEndpoint, message, config.getConnectTimeout(), TimeUnit.MILLISECONDS);
+            channelGroup.connectAndWriteMessage(nodeEndpoint, message, connectTimeout, TimeUnit.MILLISECONDS);
         } catch (Exception exception) {
             logger.warn("fail to send message to node {}, endpoint is {}, cause is {}",
                     nodeId, nodeEndpoint.getEndpoint(), exception.getMessage());

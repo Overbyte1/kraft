@@ -26,7 +26,6 @@ public abstract class AbstractMessageHandler implements RequestHandler, Response
         NodeId nodeId = abstractMessage.getNodeId();
         NodeEndpoint nodeEndpoint = nodeGroup.getGroupMember(nodeId).getNodeEndpoint();
         //根据消息类型选择不同的处理器
-        //TODO:策略模式？
         Class<?> messageClass = abstractMessage.getBody().getClass();
         if(messageClass == RequestVoteMessage.class) {
             taskExecutor.submit(
@@ -60,8 +59,6 @@ public abstract class AbstractMessageHandler implements RequestHandler, Response
                     }
             );
         }
-        //TODO：添加其余判断
-
         else {
             logger.warn("Can not handle this message, message = {}", abstractMessage.getBody());
         }

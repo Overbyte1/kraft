@@ -5,16 +5,19 @@ import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.command.*;
+import config.DefaultConfigLoader;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
 
+import java.io.IOException;
 import java.util.concurrent.CyclicBarrier;
 
 public class ServerLauncher {
@@ -25,9 +28,9 @@ public class ServerLauncher {
     private TestHandle testHandle = new TestHandle(cyclicBarrier);
     private KVStore kvStore = new MemHTKVStore();
 
-    public void init() {
+    public void init() throws IOException {
         node = new NodeMock();
-        kvDatabase = new KVDatabaseImpl(node, new MemHTKVStore());
+        kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
         kvDatabase.start();
         kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
@@ -63,7 +66,7 @@ public class ServerLauncher {
             e.printStackTrace();
         }
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         ServerLauncher launcher = new ServerLauncher();
         launcher.init();
     }

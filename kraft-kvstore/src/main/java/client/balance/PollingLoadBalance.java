@@ -2,6 +2,7 @@ package client.balance;
 
 import client.SendTimeoutException;
 import client.SocketChannelImpl;
+import client.config.ClientConfig;
 import election.node.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,8 @@ public class PollingLoadBalance extends AbstractLoadBalance {
     private List<NodeEndpoint> timeoutServerList;
     private Iterator<NodeEndpoint> iterator;
 
-    public PollingLoadBalance(Map<NodeId, Endpoint> endpointMap) {
-        super(new SocketChannelImpl());
+    public PollingLoadBalance(Map<NodeId, Endpoint> endpointMap, ClientConfig config) {
+        super(new SocketChannelImpl(config.getConnectTimeout()));
 
         inlineServerList = new LinkedList<>();
         for (Map.Entry<NodeId, Endpoint> entry : endpointMap.entrySet()) {

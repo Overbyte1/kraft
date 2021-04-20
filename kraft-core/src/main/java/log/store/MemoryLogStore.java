@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-//TODO:保证线程安全
 public class MemoryLogStore extends AbstractLogStore implements LogStore {
     private static final Logger logger = LoggerFactory.getLogger(MemoryLogStore.class);
     private List<Entry> entryList;

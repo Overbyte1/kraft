@@ -7,9 +7,9 @@ public class Endpoint implements Serializable {
     private final int port;
 
 
-    public Endpoint(String addr, int p) {
-        ipAddress = addr;
-        port = p;
+    public Endpoint(String ipAddress, int port) {
+        this.ipAddress = ipAddress;
+        this.port = port;
     }
 
     public String getIpAddress() {

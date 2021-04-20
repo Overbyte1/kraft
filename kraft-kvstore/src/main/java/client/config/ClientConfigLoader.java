@@ -1,5 +1,6 @@
-package server.config;
+package client.config;
 
+import client.balance.LoadBalancePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,29 +8,42 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-public class ServerConfigLoader implements ConfigLoader {
-    private static final Logger logger = LoggerFactory.getLogger(ServerConfigLoader.class);
-    private static final int DEFAULT_PORT = 8848;
-    private static final long DEFAULT_EXECUTION_TIMEOUT = 3000;
+public class ClientConfigLoader implements ConfigLoader {
+    private static final Logger logger = LoggerFactory.getLogger(ClientConfigLoader.class);
+    private static final long DEFAULT_CONNECT_TIMEOUT = 5000;
+    private static final long DEFAULT_SEND_TIMEOUT = 3000;
+    private static final int DEFAULT_LOAD_BALANCE_POLICY = LoadBalancePolicy.POLLING;
+    private static final int DEFAULT_SERVER_PORT = 8848;
 
     private final String propertyNamePrefix;
 
-    public ServerConfigLoader() {
+    public ClientConfigLoader() {
         this("");
     }
 
-    public ServerConfigLoader(String propertyNamePrefix) {
+    public ClientConfigLoader(String propertyNamePrefix) {
         this.propertyNamePrefix = propertyNamePrefix;
     }
 
     @Override
-    public ServerConfig load(InputStream inputStream) throws IOException {
+    public ClientConfig load(InputStream inputStream) throws IOException {
         Properties p = new Properties();
-        p.load(inputStream);
-        ServerConfig config = new ServerConfig();
-        config.setPort(getIntProperty(p, "server_port", DEFAULT_PORT));
-        config.setExecuteTimeout(getLongProperty(p, "execution_timeout", DEFAULT_EXECUTION_TIMEOUT));
-        assert(config.getExecuteTimeout() > 0);
+        if(inputStream != null)
+            p.load(inputStream);
+        ClientConfig config = new ClientConfig();
+        config.setConnectTimeout(getLongProperty(p, "connect_timeout", DEFAULT_CONNECT_TIMEOUT));
+        assert(config.getConnectTimeout() > 0);
+
+        config.setSendTimeout(getLongProperty(p, "send_timeout", DEFAULT_SEND_TIMEOUT));
+        assert(config.getSendTimeout() > 0);
+
+        config.setLoadBalancePolicy(getIntProperty(p, "load_balance_policy", DEFAULT_LOAD_BALANCE_POLICY));
+
+        config.setServerIp(p.getProperty("server_ip"));
+        assert(!"".equals(config.getServerIp()));
+
+        config.setServerPort(getIntProperty(p, "server_port", DEFAULT_SERVER_PORT));
+        assert(config.getServerPort() > 0);
 
         return config;
     }

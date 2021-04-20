@@ -1,6 +1,8 @@
 package client;
 
 import client.balance.LoadBalance;
+import client.config.ClientConfig;
+import client.config.ClientConfigLoader;
 import client.handler.CommandHandler;
 import election.node.NodeId;
 import org.jline.reader.EndOfFileException;
@@ -14,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
 
+import java.io.IOException;
 import java.util.*;
 
 public class Console {
@@ -24,9 +27,14 @@ public class Console {
     private final LineReader reader;
     private final CommandContext commandContext;
 
-    public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList, LoadBalance loadBalance) {
+    public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList, LoadBalance loadBalance) throws IOException {
+        this(serverMap, handlerList, loadBalance, new ClientConfigLoader().load(null));
+    }
+
+    public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList, LoadBalance loadBalance, ClientConfig config) {
         commandMap = buildCommandMap(handlerList);
-        commandContext = new CommandContext(serverMap, loadBalance);
+
+        commandContext = new CommandContext(serverMap, loadBalance, config);
 
         ArgumentCompleter completer = new ArgumentCompleter(
                 new StringsCompleter(commandMap.keySet()),
@@ -67,7 +75,7 @@ public class Console {
     }
 
     private void showInfo() {
-        System.out.println("Welcome to XRaft KVStore Shell\n");
+        System.out.println("Welcome to KVStore Shell\n");
         System.out.println("***********************************************");
         System.out.println("current server list: \n");
 //        commandContext.printSeverList();
