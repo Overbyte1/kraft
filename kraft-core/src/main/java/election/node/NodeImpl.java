@@ -1,6 +1,8 @@
 package election.node;
 
+import config.ClusterConfig;
 import election.config.GlobalConfig;
+import election.exception.IncompleteArgumentException;
 import election.exception.IndexException;
 import election.handler.AbstractMessageHandler;
 import election.handler.MessageHandler;
@@ -9,16 +11,22 @@ import election.handler.ResponseHandler;
 import election.role.*;
 import election.statemachine.StateMachine;
 import log.Log;
+import log.LogImpl;
 import log.entry.Entry;
+import log.store.FileLogStore;
+import log.store.LogStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rpc.ChannelGroup;
 import rpc.NodeEndpoint;
 import rpc.RpcHandler;
+import rpc.RpcHandlerImpl;
 import rpc.exception.NetworkException;
 import rpc.handler.ServiceInboundHandler;
 import rpc.message.*;
 import schedule.*;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -46,15 +54,16 @@ public class NodeImpl implements Node {
     private Log log;
 
     private Random random = new Random();
-    //TODO：配置类
-    private GlobalConfig config;
+    //private GlobalConfig config;
+    private ClusterConfig config;
+    private long logReplicationInterval;
 
     private volatile ElectionTimeoutFuture electionTimeoutFuture;
     //private volatile LogReplicationReadFuture replicationReadTimeoutFuture;
     private volatile LogReplicationFuture replicationTimeoutFuture;
 
 
-    public NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler, GlobalConfig config) {
+    private NodeImpl(AbstractRole currentRole, NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler, ClusterConfig config) {
         this.currentRole = currentRole;
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
@@ -62,14 +71,81 @@ public class NodeImpl implements Node {
         this.config = config;
     }
 
-    public NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler,
-                    Log log, GlobalConfig config, NodeId currentNodeId) {
+    private NodeImpl(NodeGroup nodeGroup, RpcHandler rpcHandler, TaskScheduler taskScheduler,
+                    Log log, NodeId currentNodeId, long logReplicationInterval) {
         this.nodeGroup = nodeGroup;
         this.rpcHandler = rpcHandler;
         this.taskScheduler = taskScheduler;
         this.log = log;
-        this.config = config;
+        //this.config = config;
         this.currentNodeId = currentNodeId;
+        this.logReplicationInterval = logReplicationInterval;
+    }
+    private static class NodeBuilder {
+        private NodeId nodeId;
+        private NodeGroup nodeGroup;
+        private RpcHandler rpcHandler;
+        private StateMachine stateMachine;
+        private TaskScheduler taskScheduler;
+        private LogStore logStore;
+        private Log log;
+        private ClusterConfig config;
+
+        public static NodeBuilder builder() {
+            return new NodeBuilder();
+        }
+
+        public NodeBuilder withId(String id) {
+            this.nodeId = new NodeId(id);
+            return this;
+        }
+
+        public NodeBuilder withLog(Log log) {
+            this.log = log;
+            return this;
+        }
+        public NodeBuilder withNodeList(List<NodeEndpoint> nodeList) {
+            nodeGroup = new NodeGroup();
+            for (NodeEndpoint nodeEndpoint : nodeList) {
+                //TODO:深拷贝
+                nodeGroup.addGroupMember(nodeEndpoint.getNodeId(), new GroupMember(nodeEndpoint));
+            }
+            return this;
+        }
+        public NodeBuilder withStateMachine(StateMachine stateMachine) {
+            this.stateMachine = stateMachine;
+            return this;
+        }
+        public NodeBuilder withConfig(ClusterConfig config) throws IOException {
+            this.config = config;
+            taskScheduler = new SingleThreadTaskScheduler(config.getMinElectionTimeout(), config.getMaxElectionTimeout(),
+                    config.getLogReplicationResultTimeout());
+            logStore = new FileLogStore(config.getPath());
+            if(stateMachine == null) {
+                throw new IncompleteArgumentException("StateMachine was not set");
+            }
+            if(nodeGroup == null) {
+                throw new IncompleteArgumentException("node list was not set");
+            }
+            if(nodeId == null) {
+                throw new IncompleteArgumentException("node id was not set");
+            }
+            log = new LogImpl(logStore, stateMachine, nodeGroup);
+            ChannelGroup channelGroup = new ChannelGroup(nodeId);
+            rpcHandler = new RpcHandlerImpl(channelGroup, config.getPort(), config.getConnectTimeout());
+
+            return this;
+        }
+        public Node build() {
+            if(nodeGroup == null) {
+                throw new IncompleteArgumentException("node list was not set"   );
+            }
+            if(rpcHandler == null) {
+                throw new IncompleteArgumentException("ClusterConfig was not set");
+            }
+
+            return new NodeImpl(nodeGroup, rpcHandler, taskScheduler, log, nodeId, config.getLogReplicationInterval());
+        }
     }
 
     @Override
@@ -316,7 +392,35 @@ public class NodeImpl implements Node {
                 }
         );
     }
-//    private void logReplicationTimeout() {
+
+    public void setCurrentRole(AbstractRole currentRole) {
+        this.currentRole = currentRole;
+    }
+
+    public void setNodeGroup(NodeGroup nodeGroup) {
+        this.nodeGroup = nodeGroup;
+    }
+
+    public void setRpcHandler(RpcHandler rpcHandler) {
+        this.rpcHandler = rpcHandler;
+    }
+
+    public void setTaskScheduler(TaskScheduler taskScheduler) {
+        this.taskScheduler = taskScheduler;
+    }
+
+    public void setCurrentNodeId(NodeId currentNodeId) {
+        this.currentNodeId = currentNodeId;
+    }
+
+    public void setLog(Log log) {
+        this.log = log;
+    }
+
+    public void setConfig(ClusterConfig config) {
+        this.config = config;
+    }
+    //    private void logReplicationTimeout() {
 //        long currentTerm = currentRole.getCurrentTerm();
 //        logger.info("logReplication timeout, current term is {}", currentTerm);
 //        becomeToRole(new CandidateRole(currentRole.getNodeId(), currentTerm + 1));
@@ -339,7 +443,6 @@ public class NodeImpl implements Node {
                 logger.debug("receive AppendEntriesResultMessage, term is {}", term);
                 //electionTimeoutFuture.cancel(true);
 
-                //TODO：断开与其他节点的网络连接
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
 
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
