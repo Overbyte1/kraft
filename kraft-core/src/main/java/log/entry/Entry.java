@@ -17,6 +17,9 @@ public abstract class Entry implements Serializable{
         this.index = index;
 
     }
+    public int getSize() {
+        return BYTE_LEN;
+    }
 
     public int getType() {
         return type;

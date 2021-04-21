@@ -1,13 +1,13 @@
 package log.store;
 
 import log.entry.Entry;
+import log.entry.GeneralEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * 基于文件进行存储，需要考虑：
@@ -23,17 +23,23 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     private EntryIndexFile entryIndexFile;
     private EntryGenerationHandler generationHandler;
 
-    //TODO:参数配置，buffer容量
-    private final int BUFFER_SIZE = 1024;
+    //buffer容量，单位为字节
+    private static final int DEFAULT_MAX_FILE_SIZE = 1024 * 1024;
+    //数据文件的最大大小，单位为KB
+    private static final int DEFAULT_BUFFER_SIZE = 1024 * 1024 * 1024;
 
-    //TODO:配置成参数，默认2G
-    private int maxFileSize = 10 * 1024;
+    private final int maxFileSize;
 
-    private List<Entry> entryBuffer;
-    private List<EntryIndexItem> entryIndexItemBuffer;
+    private final EntryBuffer buffer;
 
-
-    public FileLogStore(String path) throws IOException {
+    /**
+     * 构造方法
+     * @param path entry（日志）文件路径
+     * @param bufferSize buffer容量，单位是字节
+     * @param maxFileSize 日志文件的最大大小，单位为 KB
+     * @throws IOException
+     */
+    public FileLogStore(String path, int bufferSize, int maxFileSize) throws IOException {
         mkdir(path);
 
         generationHandler = new EntryGenerationHandler(path);
@@ -48,10 +54,24 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             lastLogIndex = 0;
         }
 
-        entryBuffer = new ArrayList<>(BUFFER_SIZE);
-        entryIndexItemBuffer = new ArrayList<>(BUFFER_SIZE);
-        //TODO：完善buffer
+        this.maxFileSize = maxFileSize;
+        buffer = new EntryBuffer(bufferSize);
     }
+
+    public FileLogStore(String path) throws IOException {
+        this(path, DEFAULT_BUFFER_SIZE, DEFAULT_MAX_FILE_SIZE);
+    }
+
+    /**
+     * 构造方法
+     * @param path entry文件目录
+     * @param bufferSize buffer容量，单位为字节
+     * @throws IOException
+     */
+    public FileLogStore(String path, int bufferSize) throws IOException {
+        this(path, bufferSize, DEFAULT_MAX_FILE_SIZE);
+    }
+
     private void mkdir(String path) {
         File file = new File(path);
         if(!file.exists()) {
@@ -62,13 +82,12 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
 
     @Override
     public Entry getLogEntry(long logIndex) {
-        //先找bufferList，之后找当前Generation，否则进行二分查找
+        //先找buffer，若找不到就去找当前Generation，否则进行二分查找所有文件
         if(logIndex > lastLogIndex) {
             return null;
         }
-        if(!entryBuffer.isEmpty() && logIndex >= entryBuffer.get(0).getIndex()) {
-            long startLogIndex = entryBuffer.get(0).getIndex();
-            return entryBuffer.get((int)(logIndex - startLogIndex));
+        if(buffer.contains(logIndex)) {
+            return buffer.getEntry(logIndex);
         }
         try {
             EntryIndexItem entryIndexItem = entryIndexFile.getEntryIndexItem(logIndex);
@@ -127,10 +146,11 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             EntryIndexItem entryIndexItem = new EntryIndexItem(entry.getType(), entry.getIndex(), entry.getTerm(), fileOffset);
             boolean result = entryIndexFile.appendEntryIndexItem(entryIndexItem);
 
-            //addToBuffer(entry, entryIndexItem);
-
-            lastLogIndex++;
-            logger.debug("empty entry {} was appended", entry);
+            if(result) {
+                buffer.add(entry, entryIndexItem);
+                lastLogIndex++;
+                logger.debug("empty entry {} was appended", entry);
+            }
             return result;
         } catch (IOException e) {
             logger.warn("fail to append empty entry to file, cause is: " + e.getMessage());
@@ -168,10 +188,9 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
                 logger.debug("entry {} was appended", entry);
                 lastLogIndex++;
                 //添加到buffer
-                //addToBuffer(entry, entryIndexItem);
-                return true;
+                buffer.add(entry, entryIndexItem);
             }
-            return false;
+            return result;
         } catch (IOException e) {
             //e.printStackTrace();
             logger.warn("fail to append entry, entry is {}, preTerm is {}, preLogIndex is {}, cause is: {}",
@@ -180,28 +199,16 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         }
 
     }
-    private void addToBuffer(Entry entry, EntryIndexItem entryIndexItem) {
-        if(entryBuffer.size() > BUFFER_SIZE) {
-            entryBuffer.clear();
-            entryIndexItemBuffer.clear();
-            //TODO:会引起命中率大幅下降，建议渐进式清除
-        }
-        entryBuffer.add(entry);
-        entryIndexItemBuffer.add(entryIndexItem);
-    }
-    private Entry getEntryFromBuffer(long entryIndex) {
-        if(!entryBuffer.isEmpty() && entryIndex >= entryBuffer.get(0).getIndex()) {
-            long startLogIndex = entryBuffer.get(0).getIndex();
-            return entryBuffer.get((int)(entryIndex - startLogIndex));
-        }
-        return null;
-    }
+
 
     /**
      * 获取entryIndex位置的前一个日志的 index 和 term，entryIndexFile和entryDataFile会跟随进行切换
      * @param entryIndex
      */
     private EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
+        if(buffer.contains(entryIndex)) {
+            return buffer.getEntryItem(entryIndex);
+        }
         EntryIndexItem indexItem = entryIndexFile.getPreEntryIndexItem(entryIndex);
         if(indexItem != null) {
             return indexItem;
@@ -212,7 +219,7 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             EntryGeneration entryGeneration = new EntryGeneration(entryDataFile, entryIndexFile);
             EntryIndexFile indexFile = entryGeneration.getEntryIndexFile();
             indexItem = indexFile.getPreEntryIndexItem(entryIndex);
-            if(indexFile != null) {
+            if(indexItem != null) {
                 entryDataFile = entryGeneration.getEntryDataFile();
                 entryIndexFile = entryGeneration.getEntryIndexFile();
                 return indexItem;
@@ -244,16 +251,12 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
 
     @Override
     public boolean deleteLogEntriesFrom(long logIndex) {
+        if(logIndex > lastLogIndex) {
+            return true;
+        }
         try {
-            //首先查看是否位于 bufferList中
-            if(!entryBuffer.isEmpty() && logIndex >= entryBuffer.get(0).getIndex()) {
-                int idx = entryBuffer.size() - 1;
-                while(entryBuffer.get(idx).getIndex() >= logIndex) {
-                    entryBuffer.remove(idx);
-                }
-                lastLogIndex = logIndex - 1;
-                return true;
-            }
+            //删buffer
+            buffer.removeFrom(logIndex);
             //定位到具体的文件，从后往前找，边找边删
             EntryIndexItem entryIndexItem;
             do {
@@ -277,12 +280,97 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             }
             return res;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn("fail to delete entry from log index [{}], cause is: {}", logIndex, e.getMessage());
             return false;
         }
     }
     public void close() throws IOException {
         entryDataFile.close();
         entryIndexFile.close();
+    }
+    static class EntryBuffer {
+        private static final Logger logger = LoggerFactory.getLogger(EntryBuffer.class);
+
+        private final LinkedList<Entry> entryBuffer;
+        private final LinkedList<EntryIndexItem> entryIndexItemBuffer;
+        private final Map<Long, Entry> entryMap;
+        private final Map<Long, EntryIndexItem> itemMap;
+        private int currentSize;
+        //buffer大小，单位为字节，默认1MB
+
+        private final int bufferSize;
+
+        public EntryBuffer(int bufferSize) {
+            assert(bufferSize > 0);
+            currentSize = 0;
+            this.bufferSize = bufferSize;
+            entryBuffer = new LinkedList<>();
+            entryIndexItemBuffer = new LinkedList<>();
+            entryMap = new HashMap<>();
+            itemMap = new HashMap<>();
+        }
+
+        void add(Entry entry, EntryIndexItem indexItem) {
+            int entrySize = entry.getSize();
+            if(currentSize + entrySize > bufferSize) {
+                if(entryBuffer.size() == 0) {
+                    return;
+                }
+                int size = entryBuffer.getFirst().getSize();
+                currentSize = currentSize - size + entrySize;
+                removeFirst();
+            }
+            addLast(entry, indexItem);
+            logger.debug("buffer: {} was appended", entry);
+        }
+        Entry getEntry(long index) {
+            Entry entry =  entryMap.get(index);
+            if(entry != null) {
+                logger.debug("buffer: entry index [{}] hit", index);
+            }
+            return entry;
+        }
+        EntryIndexItem getEntryItem(long index) {
+            return itemMap.get(index);
+        }
+        void removeFrom(long index) {
+            if(!itemMap.containsKey(index)) {
+                return;
+            }
+            while (entryBuffer.size() > 0 && entryBuffer.getLast().getIndex() >= index) {
+                removeLast();
+            }
+        }
+        boolean contains(long index) {
+            if(entryBuffer.size() == 0) {
+                return false;
+            }
+            long firstIndex = entryBuffer.getFirst().getIndex();
+            long lastIndex = entryBuffer.getLast().getIndex();
+            return firstIndex <= index && index <= lastIndex;
+        }
+        private void removeFirst() {
+            EntryIndexItem indexItem =  entryIndexItemBuffer.removeFirst();
+            entryBuffer.removeFirst();
+            entryMap.remove(indexItem.getIndex());
+            itemMap.remove(indexItem.getIndex());
+
+        }
+        private void removeLast() {
+            long index = entryBuffer.getLast().getIndex();
+            entryBuffer.removeLast();
+            entryIndexItemBuffer.removeLast();
+            entryMap.remove(index);
+            itemMap.remove(index);
+
+        }
+        private void addLast(Entry entry, EntryIndexItem indexItem) {
+            assert(entry.getIndex() == indexItem.getIndex());
+
+            entryIndexItemBuffer.addLast(indexItem);
+            entryBuffer.addLast(entry);
+            entryMap.put(entry.getIndex(), entry);
+            itemMap.put(indexItem.getIndex(), indexItem);
+        }
     }
 }

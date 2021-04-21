@@ -26,6 +26,11 @@ public class GeneralEntry extends Entry{
     }
 
     @Override
+    public int getSize() {
+        return super.getSize() + commandBytes.length;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
