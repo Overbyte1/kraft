@@ -145,7 +145,7 @@ public class EntryIndexFile {
 
         lastEntryIndexItem = entryIndexItem;
 
-        logger.debug("entry index item {} was write to entry index file {} from file offset: {}",
+        logger.debug("do write: entry index item {} was write to entry index file {} from file offset: {}",
                 entryIndexItem, filename, fileOffset);
 
         return true;
@@ -170,7 +170,7 @@ public class EntryIndexFile {
         randomAccessFile.read(bytes);
 
         EntryIndexItem entryIndexItem = entryIndexSerializer.bytesToEntryIndexItem(bytes);
-        logger.debug("entry index item {} was read from file {}, file offset: {}", entryIndexItem, filename, fileOffset);
+        logger.debug("do read: entry index item {} was read from file {}, file offset: {}", entryIndexItem, filename, fileOffset);
         return entryIndexItem;
     }
     public EntryIndexItem getPreEntryIndexItem(long entryIndex) throws IOException {
@@ -193,7 +193,7 @@ public class EntryIndexFile {
         randomAccessFile.seek(fileOffset);
         randomAccessFile.setLength(fileOffset);
 
-        logger.debug("delete entries from entry index {}, file offset is {}", logIndex, fileOffset);
+        logger.debug("do delete: delete entries from entry index {}, file offset is {}", logIndex, fileOffset);
         return true;
     }
 

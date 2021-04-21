@@ -83,7 +83,7 @@ public class EntryDataFile {
         randomAccessFile.writeInt(bytes.length);
         //写入entry数据
         randomAccessFile.write(bytes);
-        logger.debug("entry {} was append to entry data file: {}, start file offset: {}", entry, filename, offset);
+        logger.debug("do write: entry {} was append to entry data file: {}, start file offset: {}", entry, filename, offset);
         //写入最后一个entry的index
 //        lastEntryIndex = entry.getIndex();
 //        randomAccessFile.writeLong(lastEntryIndex);
@@ -105,7 +105,7 @@ public class EntryDataFile {
         byte[] bytes = new byte[size];
         randomAccessFile.read(bytes);
         Entry entry = entrySerializerHandler.bytesToEntry(bytes);
-        logger.debug("entry {} was read from file {}, file offset: {}", entry, filename, offset);
+        logger.debug("do read: entry {} was read from file {}, file offset: {}", entry, filename, offset);
         return entry;
     }
     public boolean deleteFromOffset(long offset) throws IOException {
@@ -113,7 +113,7 @@ public class EntryDataFile {
             return false;
         }
         randomAccessFile.setLength(offset);
-        logger.debug("delete entries from file offset {}, entry data file is {}", offset, filename);
+        logger.debug("do delete: delete entries from file offset {}, entry data file is {}", offset, filename);
         return true;
     }
 
