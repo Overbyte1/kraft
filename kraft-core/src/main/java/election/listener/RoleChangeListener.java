@@ -1,4 +1,5 @@
 package election.listener;
 
-public interface RoleChaneListener {
+public interface RoleChangeListener {
+    //TODO:需要哪些数据
 }
