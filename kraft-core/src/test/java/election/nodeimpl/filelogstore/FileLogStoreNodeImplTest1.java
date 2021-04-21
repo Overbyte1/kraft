@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class FileLogStoreNodeImplTest1 {
     private Node node;
@@ -45,9 +48,16 @@ public class FileLogStoreNodeImplTest1 {
                 .build();
     }
     @Test
-    public void testLog() {
+    public void testLog() throws InterruptedException {
         //rpcHandler.initialize();
         node.start();
+        Thread.sleep(10000);
+        if(node.isLeader()) {
+            ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+            executor.scheduleAtFixedRate(() -> {
+                node.appendLog(new byte[]{0, 1, 2, 3, 4});
+            }, 0, 5, TimeUnit.SECONDS);
+        }
         waiting();
     }
     private void waiting() {

@@ -72,4 +72,15 @@ public class ReplicationState {
     public void incMatchIndex() {
         incMatchIndex(1);
     }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("ReplicationState{");
+        sb.append("nextIndex=").append(nextIndex);
+        sb.append(", matchIndex=").append(matchIndex);
+        sb.append(", replicating=").append(replicating);
+        sb.append(", lastReplicationTime=").append(lastReplicationTime);
+        sb.append('}');
+        return sb.toString();
+    }
 }

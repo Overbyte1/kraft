@@ -53,17 +53,14 @@ public class LogImpl implements Log {
         if(commitIndex == logStore.getLastLogIndex()) {
             return false;
         }
-        EntryMeta entryMata = logStore.getEntryMata(commitIndex + 1);
-        //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
-        if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
-            long oldCommitIndex = commitIndex;
-            commitIndex++;
-            logger.debug("advance commit index to {} from {}", commitIndex, oldCommitIndex);
-            //appendLog(logStore.getLogEntry(idx));
+        long newCommitIndex = nodeGroup.getMajorMatchIndex();
+        EntryMeta entryMata = logStore.getEntryMata(newCommitIndex);
+        if(entryMata != null &&  currentTerm == entryMata.getTerm()) {
+            logger.debug("advance commit index to {} from {}", newCommitIndex, commitIndex);
+            commitIndex = newCommitIndex;
             return true;
         }
         logger.debug("current commit index is: {}", commitIndex);
-        //TODO:非首次启动，commitIndex的维护
         return false;
     }
 

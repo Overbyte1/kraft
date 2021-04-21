@@ -50,13 +50,16 @@ public class FileLogStoreNodeImplTest {
         //TODO:重启后commitIndex无法推进到最新，replicationState的更新存在bug
     }
     @Test
-    public void testLog() {
+    public void testLog() throws InterruptedException {
         //rpcHandler.initialize();
         node.start();
-//        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-//        executor.scheduleAtFixedRate(()-> {
-//            node.appendLog(new byte[]{0, 1, 2, 3, 4});
-//        }, 0, 5, TimeUnit.SECONDS);
+        Thread.sleep(10000);
+        if(node.isLeader()) {
+            ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+            executor.scheduleAtFixedRate(() -> {
+                node.appendLog(new byte[]{0, 1, 2, 3, 4});
+            }, 0, 5, TimeUnit.SECONDS);
+        }
         waiting();
     }
     private void waiting() {
