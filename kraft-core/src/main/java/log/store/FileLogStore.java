@@ -1,7 +1,6 @@
 package log.store;
 
 import log.entry.Entry;
-import log.entry.GeneralEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,12 +231,12 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
     }
 
     /**
-     * 如果文件大小超过限制，就创建新的
+     * 如果文件大小超过限制，就创建新的文件
      * @throws IOException
      */
     private void updateFiles() throws IOException {
         long size = entryDataFile.getSize();
-        if(size > maxFileSize) {
+        if(size > maxFileSize * 1024) {
             logger.debug("current entry data file length is {} byte, greater than maxsize {}", size, maxFileSize);
             EntryIndexItem entryIndexItem = entryIndexFile.getLastEntryIndexItem();
             EntryGeneration entryGeneration = generationHandler
@@ -298,12 +297,12 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
         private int currentSize;
         //buffer大小，单位为字节，默认1MB
 
-        private final int bufferSize;
+        private final int BufferSize;
 
         public EntryBuffer(int bufferSize) {
             assert(bufferSize > 0);
             currentSize = 0;
-            this.bufferSize = bufferSize;
+            this.BufferSize = bufferSize;
             entryBuffer = new LinkedList<>();
             entryIndexItemBuffer = new LinkedList<>();
             entryMap = new HashMap<>();
@@ -312,16 +311,24 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
 
         void add(Entry entry, EntryIndexItem indexItem) {
             int entrySize = entry.getSize();
-            if(currentSize + entrySize > bufferSize) {
+            if(currentSize + entrySize > BufferSize) {
                 if(entryBuffer.size() == 0) {
                     return;
                 }
+                logger.debug("buffer: current buffer size ({}) > buffer capacity ({}), remove the first entry: {}",
+                        currentSize + entrySize, BufferSize, entryBuffer.getFirst());
                 int size = entryBuffer.getFirst().getSize();
-                currentSize = currentSize - size + entrySize;
+                currentSize = currentSize - size;
                 removeFirst();
             }
             addLast(entry, indexItem);
-            logger.debug("buffer: {} was appended", entry);
+            currentSize += entrySize;
+            //while循环清除
+            while (currentSize > BufferSize && entryBuffer.size() > 0) {
+                currentSize -= entryBuffer.getFirst().getSize();
+                entryBuffer.removeFirst();
+            }
+            logger.debug("buffer: {} was appended, current buffer size is {}, buffer capacity is {}", entry, currentSize, BufferSize);
         }
         Entry getEntry(long index) {
             Entry entry =  entryMap.get(index);
@@ -334,9 +341,9 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             return itemMap.get(index);
         }
         void removeFrom(long index) {
-            if(!itemMap.containsKey(index)) {
-                return;
-            }
+//            if(!itemMap.containsKey(index)) {
+//                return;
+//            }
             while (entryBuffer.size() > 0 && entryBuffer.getLast().getIndex() >= index) {
                 removeLast();
             }
@@ -355,6 +362,11 @@ public class FileLogStore extends AbstractLogStore implements LogStore {
             entryMap.remove(indexItem.getIndex());
             itemMap.remove(indexItem.getIndex());
 
+        }
+        int getEntrySize() {
+            int size = entryBuffer.size();
+            //assert(size == entryIndexItemBuffer.size() && size == entryMap.size() && size ==  itemMap.size());
+            return entryBuffer.size();
         }
         private void removeLast() {
             long index = entryBuffer.getLast().getIndex();
