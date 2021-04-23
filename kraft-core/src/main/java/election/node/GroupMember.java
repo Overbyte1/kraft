@@ -8,6 +8,7 @@ public class GroupMember {
     private static final Logger logger = LoggerFactory.getLogger(GroupMember.class);
     private volatile ReplicationState replicationState;
     private NodeEndpoint nodeEndpoint;
+    private volatile boolean inline = true;
 
     public GroupMember(ReplicationState replicationState, NodeEndpoint nodeEndpoint) {
         this.replicationState = replicationState;
@@ -36,6 +37,14 @@ public class GroupMember {
     public void resetReplicationState(long lastLogIndex) {
         replicationState.setMatchIndex(0);
         replicationState.setNextIndex(lastLogIndex);
+    }
+
+    public boolean isInline() {
+        return inline;
+    }
+
+    public void setInline(boolean inline) {
+        this.inline = inline;
     }
 
     public boolean isReplicating() {

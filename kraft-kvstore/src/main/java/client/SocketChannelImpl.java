@@ -24,7 +24,8 @@ public class SocketChannelImpl implements SocketChannel {
     private Lock lock;
     private Condition condition;
     private ReadHandler readHandler;
-    private long sendTimeout = 5000;
+    private static final long DEFAULT_TIMEOUT = 5000;
+    private long sendTimeout = DEFAULT_TIMEOUT;
 
     public SocketChannelImpl(long timeout) {
         this.sendTimeout = timeout;
@@ -35,6 +36,11 @@ public class SocketChannelImpl implements SocketChannel {
         condition = lock.newCondition();
         readHandler = new ReadHandler();
     }
+
+    public SocketChannelImpl() {
+        this(DEFAULT_TIMEOUT);
+    }
+
     @Override
     public Object send(Endpoint endpoint, Object msg) {
         return send(endpoint.getIpAddress(), endpoint.getPort(), msg);

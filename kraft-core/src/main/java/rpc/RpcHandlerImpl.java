@@ -54,6 +54,7 @@ public class RpcHandlerImpl implements RpcHandler {
     public RpcHandlerImpl(ChannelGroup channelGroup, int port) {
         this.channelGroup = channelGroup;
         this.port = port;
+        this.selfId = channelGroup.getSelfId();
     }
 
     @Override

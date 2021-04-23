@@ -188,6 +188,9 @@ public class FileLogStoreTest {
             return;
         }
         File[] files = file.listFiles();
+        if(files == null || files.length == 0) {
+            file.delete();
+        }
         for (File file1 : files) {
             deleteFiles(file1);
         }

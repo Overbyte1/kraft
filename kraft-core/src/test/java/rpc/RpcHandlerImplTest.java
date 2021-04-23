@@ -41,7 +41,7 @@ public class RpcHandlerImplTest extends TestCase {
     public void testInitialize() {
         NodeId nodeId = new NodeId("A");
         int port = 8887;
-        ChannelGroup channelGroup = new ChannelGroup(nodeId);
+        ChannelGroup channelGroup = new ChannelGroup(initNodeGroup());
         RpcHandlerImpl rpcHandler = new RpcHandlerImpl(channelGroup, port);
         rpcHandler.initialize();
 
@@ -57,8 +57,14 @@ public class RpcHandlerImplTest extends TestCase {
 
         int selfPort = 8888, otherPort = 8889;
 
-        ChannelGroup selfChannelGroup = new ChannelGroup(selfId);
-        ChannelGroup otherChannelGroup = new ChannelGroup(otherNodeId);
+        NodeGroup selfGroup = initNodeGroup();
+        selfGroup.setSelfNodeId(selfId);
+
+        NodeGroup otherGroup = initNodeGroup();
+        otherGroup.setSelfNodeId(otherNodeId);
+
+        ChannelGroup selfChannelGroup = new ChannelGroup(selfGroup);
+        ChannelGroup otherChannelGroup = new ChannelGroup(otherGroup);
 
         RpcHandlerImpl selfRpcHandler = new RpcHandlerImpl(selfChannelGroup, selfPort);
         RpcHandlerImpl otherRpcHandler = new RpcHandlerImpl(otherChannelGroup, otherPort);
@@ -105,8 +111,14 @@ public class RpcHandlerImplTest extends TestCase {
 
         int selfPort = 8890, otherPort = 8891;
 
-        ChannelGroup selfChannelGroup = new ChannelGroup(selfId);
-        ChannelGroup otherChannelGroup = new ChannelGroup(otherNodeId);
+        NodeGroup selfGroup = initNodeGroup();
+        selfGroup.setSelfNodeId(selfId);
+
+        NodeGroup otherGroup = initNodeGroup();
+        otherGroup.setSelfNodeId(otherNodeId);
+
+        ChannelGroup selfChannelGroup = new ChannelGroup(selfGroup);
+        ChannelGroup otherChannelGroup = new ChannelGroup(otherGroup);
 
         RpcHandlerImpl selfRpcHandler = new RpcHandlerImpl(selfChannelGroup, selfPort);
         RpcHandlerImpl otherRpcHandler = new RpcHandlerImpl(otherChannelGroup, otherPort);

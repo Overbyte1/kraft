@@ -28,6 +28,7 @@ public class ServerLauncher {
     private TestHandle testHandle = new TestHandle(cyclicBarrier);
     private KVStore kvStore = new MemHTKVStore();
 
+
     public void init() throws IOException {
         node = new NodeMock();
         kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));

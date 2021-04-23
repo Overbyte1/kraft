@@ -1,4 +1,4 @@
-package server;
+package server.vmtest;
 
 import com.alibaba.fastjson.JSON;
 import common.codec.FrameDecoder;
@@ -19,6 +19,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.KVDatabase;
+import server.KVDatabaseImpl;
+import server.ServerLauncher;
+
+import server.config.ServerConfig;
 import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
@@ -37,20 +42,23 @@ public class ServerLauncher3 {
     private KVStore kvStore = new MemHTKVStore();
 
     private void buildNode() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft3.json"), ClusterConfig.class);
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft3.json"), ClusterConfig.class);
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
         node = builder.withId("C")
                 .withListenPort(config.getPort())
                 .withLogReplicationInterval(config.getLogReplicationInterval())
                 .withNodeList(config.getMembers())
-                .withMemLogStore()
+                .withPath(config.getPath() + "C/")
                 .withStateMachine(new DefaultStateMachine())
                 .build();
     }
 
     public void init() throws IOException {
         buildNode();
-        kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
+        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server3.json"), ServerConfig.class);
+        System.out.println(config);
+        kvDatabase = new KVDatabaseImpl(node, config);
+
         kvDatabase.start();
         kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
@@ -61,33 +69,9 @@ public class ServerLauncher3 {
         kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
         kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
 
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
-        Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(workerGroup)
-                .channel(NioSocketChannel.class)
-                .remoteAddress("localhost", 8848)
-                .handler(new ChannelInitializer<NioSocketChannel>() {
-                    @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new FrameDecoder())
-                                .addLast(new FrameEncoder())
-                                .addLast(new ProtocolDecoder())
-                                .addLast(new ProtocolEncoder())
-                                .addLast(testHandle)
-                                .addLast(new LoggingHandler(LogLevel.INFO));
-                    }
-                });
-        try {
-            ChannelFuture future = bootstrap.connect().sync();
-            System.out.println("connect established");
-            channel = future.channel();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
     public static void main(String[] args) throws IOException {
-        ServerLauncher launcher = new ServerLauncher();
+        ServerLauncher3 launcher = new ServerLauncher3();
         launcher.init();
     }
 }

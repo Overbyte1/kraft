@@ -2,11 +2,14 @@ package rpc;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import election.node.GroupMember;
+import election.node.NodeGroup;
 import election.node.NodeId;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
@@ -27,23 +30,34 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChannelGroup {
     private static final Logger logger = LoggerFactory.getLogger(ChannelGroup.class);
+    private static final long DEFAULT_IDLE_TIME = 10000;
     private Map<NodeId, NioChannel> channelMap;
     private Map<NioChannel, NodeId> nodeIdMap;
     private final NodeId selfId;
+    private final NodeGroup nodeGroup;
+    private final long idleTime;
 
-    public ChannelGroup(NodeId selfId) {
-        this.selfId = selfId;
+    public ChannelGroup(NodeGroup nodeGroup, long idleTime) {
+        this.nodeGroup = nodeGroup;
+        this.selfId = nodeGroup.getSelfNodeId();
+        this.idleTime = idleTime;
         //channelMap = new ConcurrentHashMap<>();
         //BiMap 双向映射
         BiMap<NodeId, NioChannel> map = HashBiMap.create();
         channelMap = map;
         nodeIdMap = map.inverse();
     }
+    public ChannelGroup(NodeGroup nodeGroup) {
+        this(nodeGroup, DEFAULT_IDLE_TIME);
+    }
     //TODO:优化锁性能
     public synchronized NodeId getNodeId(NioChannel channel) {
         return nodeIdMap.get(channel);
     }
 
+    public NodeId getSelfId() {
+        return selfId;
+    }
 
     public synchronized NioChannel getChannel(NodeId nodeId) {
         return channelMap.get(nodeId);
@@ -72,9 +86,13 @@ public class ChannelGroup {
                     logger.debug("succeed to connect node {}, address: {}", nodeId, endpoint);
                     addChannel(nodeId, new NioChannel(channelFuture.channel()));
                     writeMessage(nodeId, message, sendTimeout);
+                    //连接成功，设置节点状态为 上线
+                    nodeGroup.getGroupMember(nodeId).setInline(true);
                 } else {
-                    logger.info("connect timeout, remote node is {}, endpoint is {}, cancel connection", nodeId, endpoint);
+                    logger.info("connect timeout: remote node is {}, endpoint is {}", nodeId, endpoint);
                     future.cancel(true);
+                    //设置节点状态为 下线
+                    nodeGroup.getGroupMember(nodeId).setInline(false);
                 }
             }
         });
@@ -88,8 +106,14 @@ public class ChannelGroup {
                 @Override
                 public void operationComplete(Future<? super Void> future) throws Exception {
                     future.await(sendTimeout, TimeUnit.MILLISECONDS);
+
                     if(!future.isSuccess()) {
                         future.cancel(false);
+                        //设置节点状态为 下线
+                        GroupMember member = nodeGroup.getGroupMember(nodeId);
+                        if(member.isInline()) {
+                            member.setInline(false);
+                        }
                         logger.info("fail to send message: send timeout, exceed {} ms", sendTimeout);
                     }
                 }
@@ -97,6 +121,10 @@ public class ChannelGroup {
             logger.debug("send {}", abstractMessage);
         } else {
             removeChannel(nodeId);
+            GroupMember member = nodeGroup.getGroupMember(nodeId);
+            if(member.isInline()) {
+                member.setInline(false);
+            }
             logger.warn("failed to write message, because the connection of node {} was closed", nodeId);
         }
     }
@@ -175,6 +203,16 @@ public class ChannelGroup {
             ctx.close();
             //TODO:从map中移除channel
 //            super.exceptionCaught(ctx, cause);
+        }
+    }
+
+    /**
+     * 检测节点之间是否长时间无数据交互，如果长时间无数据交互则可以断开它们的网络连接
+     */
+    private class ConnectionIdleHandler extends IdleStateHandler {
+        public ConnectionIdleHandler() {
+            super(true, 0,0,  idleTime, TimeUnit.MILLISECONDS);
+            //TODO：处理事件
         }
     }
 

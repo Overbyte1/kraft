@@ -14,6 +14,11 @@ public class MGetHandler extends InlineCommandHandler {
     @Override
     public Object doExecute(String[] args, CommandContext commandContext) {
         logger.debug("do mget, keys: {}", Arrays.toString(args));
-        return commandContext.getLoadBalance().send(new MGetCommand(args));
+        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+    }
+
+    @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
+        return new MGetCommand(args);
     }
 }

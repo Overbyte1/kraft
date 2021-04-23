@@ -15,7 +15,12 @@ public class DelHandler extends InlineCommandHandler {
     @Override
     public Object doExecute(String[] args, CommandContext commandContext) {
         logger.debug("do del");
-        return commandContext.getLoadBalance().send(new DelCommand(args[0]));
+        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+    }
+
+    @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
+        return new DelCommand(args[0]);
     }
 
 }

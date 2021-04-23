@@ -17,6 +17,10 @@ public class NodeGroup {
         this.selfNodeId = selfNodeId;
     }
 
+    public NodeId getSelfNodeId() {
+        return selfNodeId;
+    }
+
     public int getSize() {
         return nodesMap.size();
     }

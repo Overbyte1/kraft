@@ -20,6 +20,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rpc.Endpoint;
 import rpc.NodeEndpoint;
 import server.config.ServerConfig;
 import server.handler.CommandHandler;
@@ -46,6 +47,8 @@ public class KVDatabaseImpl implements KVDatabase {
     private final StateMachine stateMachine = new DefaultStateMachine();
 
     private final int NCPU = Runtime.getRuntime().availableProcessors() * 2;
+    //TODO:
+    private final int portInterval = 100;
 
     private final ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(NCPU,
             (Runnable r)-> new Thread(r, "TimeoutTaskThread"));
@@ -77,7 +80,7 @@ public class KVDatabaseImpl implements KVDatabase {
         @Override
         public void run() {
             connectorMap.get(requestId)
-                    .reply(new Response(ResponseType.FAILURE, new NoPayloadResult(StatusCode.FAIL_TIMEOUT)));
+                    .reply(new Response(ResponseType.FAILURE, FailureResult.TIMEOUT));
             connectorMap.remove(requestId);
             logger.warn("execution timeout, response client");
         }
@@ -113,7 +116,7 @@ public class KVDatabaseImpl implements KVDatabase {
                 });
         try {
             serverBootstrap.bind(config.getPort()).sync();
-            logger.info("server was started");
+            logger.info("key-value store server was started on port [{}]", config.getPort());
         } catch (InterruptedException e) {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
@@ -132,7 +135,11 @@ public class KVDatabaseImpl implements KVDatabase {
         //TODO:添加选项，决定是否能够在Follower节点读数据
         NodeEndpoint leaderNodeEndpoint = node.getLeaderNodeEndpoint();
         if(leaderNodeEndpoint != null) {
-            connection.reply(new Response(ResponseType.REDIRECT, new RedirectResult(leaderNodeEndpoint)));
+            Endpoint endpoint = leaderNodeEndpoint.getEndpoint();
+            //上层服务的端口 = Raft的端 + portInterval 方便重定向
+            Endpoint newEndpoint = new Endpoint(endpoint.getIpAddress(), endpoint.getPort() + portInterval);
+            connection.reply(new Response(ResponseType.REDIRECT,
+                    new RedirectResult(new NodeEndpoint(leaderNodeEndpoint.getNodeId(), newEndpoint))));
         } else {
             //Leader不存在
             connection.reply(new Response(ResponseType.FAILURE, FailureResult.NO_LEADER));
@@ -194,6 +201,12 @@ public class KVDatabaseImpl implements KVDatabase {
             }
             return true;
         }
+
+    }
+    //TODO:builder
+    class KVDataBaseImplBuilder {
+        private KVStore kvStore;
+        private Node node;
 
     }
 

@@ -22,4 +22,5 @@ public abstract class InlineCommandHandler implements CommandHandler {
     }
 
     protected abstract Object doExecute(String[] args, CommandContext commandContext);
+    public abstract Object getSendMessage(String[] args, CommandContext commandContext);
 }

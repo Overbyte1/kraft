@@ -15,6 +15,11 @@ public class SetHandler extends InlineCommandHandler {
             throw new ParameterException("illegal arguments");
         }
         logger.debug("do set, key/value: [{}]-[{}]", args[0], args[1]);
-        return commandContext.getLoadBalance().send(new SetCommand(args[0], args[1].getBytes()));
+        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+    }
+
+    @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
+        return new SetCommand(args[0], args[1].getBytes());
     }
 }

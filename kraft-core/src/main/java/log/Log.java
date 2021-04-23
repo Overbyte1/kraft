@@ -38,6 +38,7 @@ public interface Log {
      * @return
      */
     AppendEntriesMessage createAppendEntriesMessage(NodeId leaderId, long term, long nextIndex);
+    AppendEntriesMessage createEmptyAppendEntriesMessage(NodeId leaderId, long term, long nextIndex);
 
     /**
      * 创建请求投票消息
@@ -67,14 +68,17 @@ public interface Log {
 
     /**
      * 将命令应用到状态机
+     * @return
      */
-    void apply(byte[] command);
+    boolean apply(byte[] command);
 
     /**
      * 注册状态机
      * @param stateMachine
      */
     void registerStateMachine(StateMachine stateMachine);
+
+    void close();
 
 
 }

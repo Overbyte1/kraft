@@ -11,8 +11,8 @@ public interface TaskExecutor {
     Future<?> submit( Runnable task);
 
     <V> Future<V> submit(@Nonnull Callable<V> task);
-    <V> Future<?> submit(@Nonnull Callable<V> task, FutureCallback<Object> callback);
-    void submit(@Nonnull Runnable task, FutureCallback<Object> callback);
+    <V> Future<?> submit(@Nonnull Callable<V> task, FutureCallback<V> callback);
+    Future<?> submit(@Nonnull Runnable task, FutureCallback<Object> callback);
 
     void shutdown() throws InterruptedException;
 

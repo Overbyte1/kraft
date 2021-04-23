@@ -47,7 +47,6 @@ public class FileLogStoreNodeImplTest {
                 .withPath(config.getPath() + "A/")
                 .withStateMachine(new DefaultStateMachine())
                 .build();
-        //TODO:重启后commitIndex无法推进到最新，replicationState的更新存在bug
     }
     @Test
     public void testLog() throws InterruptedException {

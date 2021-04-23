@@ -1,4 +1,4 @@
-package server;
+package server.vmtest;
 
 import com.alibaba.fastjson.JSON;
 import common.codec.FrameDecoder;
@@ -16,11 +16,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import server.KVDatabase;
+import server.KVDatabaseImpl;
+import server.ServerLauncher;
+import server.config.ServerConfig;
 import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,20 +40,26 @@ public class ServerLauncher1 {
     private KVStore kvStore = new MemHTKVStore();
 
     private void buildNode() throws IOException {
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft1.json"), ClusterConfig.class);
+        File file = new File(".");
+        System.out.println(file.getAbsolutePath());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft1.json"), ClusterConfig.class);
+        System.out.println(config);
+
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
         node = builder.withId("A")
                 .withListenPort(config.getPort())
                 .withLogReplicationInterval(config.getLogReplicationInterval())
                 .withNodeList(config.getMembers())
-                .withMemLogStore()
+                .withPath(config.getPath() + "A/")
                 .withStateMachine(new DefaultStateMachine())
                 .build();
     }
 
     public void init() throws IOException {
         buildNode();
-        kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
+        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server1.json"), ServerConfig.class);
+
+        kvDatabase = new KVDatabaseImpl(node, config);
         kvDatabase.start();
         kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
@@ -59,57 +70,33 @@ public class ServerLauncher1 {
         kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
         kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
 
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
-        Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(workerGroup)
-                .channel(NioSocketChannel.class)
-                .remoteAddress("localhost", 8848)
-                .handler(new ChannelInitializer<NioSocketChannel>() {
-                    @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new FrameDecoder())
-                                .addLast(new FrameEncoder())
-                                .addLast(new ProtocolDecoder())
-                                .addLast(new ProtocolEncoder())
-                                .addLast(testHandle)
-                                .addLast(new LoggingHandler(LogLevel.INFO));
-                    }
-                });
-        try {
-            ChannelFuture future = bootstrap.connect().sync();
-            System.out.println("connect established");
-            channel = future.channel();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
     public static void main(String[] args) throws IOException {
-        ServerLauncher launcher = new ServerLauncher();
+        ServerLauncher1 launcher = new ServerLauncher1();
         launcher.init();
     }
 }
 
-//class TestHandle extends ChannelInboundHandlerAdapter {
-//    private Object receiveMessage;
-//    private CyclicBarrier cyclicBarrier;
-//
-//    public TestHandle(CyclicBarrier cyclicBarrier) {
-//        this.cyclicBarrier = cyclicBarrier;
-//    }
-//
-//    @Override
-//    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-//        System.out.println("client receive message: " + msg);
-//        receiveMessage = msg;
-//        cyclicBarrier.await();
-//        super.channelRead(ctx, msg);
-//    }
-//
-//    public Object getReceiveMessage() {
-//        return receiveMessage;
-//    }
-//    public void resetMsg() {
-//        receiveMessage = null;
-//    }
-//}
+class TestHandle extends ChannelInboundHandlerAdapter {
+    private Object receiveMessage;
+    private CyclicBarrier cyclicBarrier;
+
+    public TestHandle(CyclicBarrier cyclicBarrier) {
+        this.cyclicBarrier = cyclicBarrier;
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        System.out.println("client receive message: " + msg);
+        receiveMessage = msg;
+        cyclicBarrier.await();
+        super.channelRead(ctx, msg);
+    }
+
+    public Object getReceiveMessage() {
+        return receiveMessage;
+    }
+    public void resetMsg() {
+        receiveMessage = null;
+    }
+}

@@ -11,6 +11,12 @@ public class MSetHandler extends InlineCommandHandler {
 
     @Override
     public Object doExecute(String[] args, CommandContext commandContext) {
+
+        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+    }
+
+    @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
         if(args.length % 2 == 1 || args.length == 0) {
             throw new ParameterException("illegal arguments");
         }
@@ -21,6 +27,6 @@ public class MSetHandler extends InlineCommandHandler {
             keys[i] = args[idx];
             value[i] = args[idx + 1].getBytes();
         }
-        return commandContext.getLoadBalance().send(new MSetCommand(keys, value));
+        return new MSetCommand(keys, value);
     }
 }

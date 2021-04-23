@@ -17,7 +17,7 @@ public class SingleThreadTaskExecutor implements TaskExecutor {
     }
 
     @Override
-    public <V> Future<V> submit(@Nonnull Callable<V> task, FutureCallback<Object> callback) {
+    public <V> Future<V> submit(@Nonnull Callable<V> task, FutureCallback<V> callback) {
         Callable<V> tempTask = ()->{
             V res = null;
             try {
@@ -31,7 +31,7 @@ public class SingleThreadTaskExecutor implements TaskExecutor {
         return executorService.submit(tempTask);
     }
     @Override
-    public void submit(@Nonnull Runnable task, FutureCallback<Object> callback) {
+    public Future<?> submit(@Nonnull Runnable task, FutureCallback<Object> callback) {
         Runnable tempTask = ()->{
             try {
                 task.run();
@@ -41,7 +41,7 @@ public class SingleThreadTaskExecutor implements TaskExecutor {
             }
 
         };
-        executorService.execute(tempTask);
+        return executorService.submit(tempTask);
     }
 
     @Override
