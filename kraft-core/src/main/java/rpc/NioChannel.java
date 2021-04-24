@@ -7,6 +7,8 @@ import rpc.message.AppendEntriesResultMessage;
 import rpc.message.RequestVoteMessage;
 import rpc.message.RequestVoteResultMessage;
 
+import java.util.Objects;
+
 public class NioChannel implements rpc.Channel {
     private io.netty.channel.Channel nettyChannel;
 //    private NodeId nodeId;
@@ -40,6 +42,19 @@ public class NioChannel implements rpc.Channel {
     }
     public boolean isActive() {
         return nettyChannel.isActive();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NioChannel channel = (NioChannel) o;
+        return Objects.equals(nettyChannel, channel.nettyChannel);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nettyChannel);
     }
 
     @Override

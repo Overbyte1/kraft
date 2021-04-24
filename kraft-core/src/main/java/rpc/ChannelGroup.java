@@ -9,6 +9,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -50,7 +51,7 @@ public class ChannelGroup {
     public ChannelGroup(NodeGroup nodeGroup) {
         this(nodeGroup, DEFAULT_IDLE_TIME);
     }
-    //TODO:优化锁性能
+
     public synchronized NodeId getNodeId(NioChannel channel) {
         return nodeIdMap.get(channel);
     }
@@ -70,8 +71,6 @@ public class ChannelGroup {
     public void connectAndWriteMessage(NodeEndpoint nodeEndpoint, Object message, long connectTimeout, long sendTimeout) {
         NodeId nodeId = nodeEndpoint.getNodeId();
         if(isConnect(nodeId)) {
-            NioChannel channel = getChannel(nodeId);
-            //channel.writeMessage(message);
             writeMessage(nodeId, message, sendTimeout);
             return;
         }
@@ -152,9 +151,11 @@ public class ChannelGroup {
                         pipeline.addLast(new FrameEncoder());
                         pipeline.addLast(new ProtocolDecoder());
                         pipeline.addLast(new ProtocolEncoder());
-                        //TODO:
+
                         pipeline.addLast(ServiceInboundHandler.getInstance());
                         pipeline.addLast(new IdentificationHandler());
+                        pipeline.addLast(new ConnectionIdleHandler());
+                        pipeline.addLast(new ConnectionCleanerHandler());
                         //pipeline.addLast(new LoggingHandler(LogLevel.INFO));
                     }
                 });
@@ -198,11 +199,10 @@ public class ChannelGroup {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logger.warn("exception Caught: {}" + cause.getMessage());
+            logger.warn("exception caught: {}" + cause.getMessage());
             //cause.printStackTrace();
             ctx.close();
-            //TODO:从map中移除channel
-//            super.exceptionCaught(ctx, cause);
+            removeChannel(new NioChannel(ctx.channel()));
         }
     }
 
@@ -212,18 +212,31 @@ public class ChannelGroup {
     private class ConnectionIdleHandler extends IdleStateHandler {
         public ConnectionIdleHandler() {
             super(true, 0,0,  idleTime, TimeUnit.MILLISECONDS);
-            //TODO：处理事件
+        }
+    }
+
+    /**
+     * 负责关闭长时间无数据交互的连接
+     */
+    private class ConnectionCleanerHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if(evt == IdleStateEvent.ALL_IDLE_STATE_EVENT) {
+                logger.info("no network data with node [{}]  within [{}] ms, close the connection",
+                        getNodeId(new NioChannel(ctx.channel())), idleTime);
+                ctx.close();
+                removeChannel(new NioChannel(ctx.channel()));
+            }
+            super.userEventTriggered(ctx, evt);
         }
     }
 
     public void removeChannel(NodeId nodeId) {
-        NioChannel channel = channelMap.get(nodeId);
-        if(channel != null) {
-            if(channel.isActive()) {
-                channel.close();
-            }
-            channelMap.remove(nodeId);
-        }
+        channelMap.remove(nodeId);
+
+    }
+    public void removeChannel(NioChannel channel) {
+        nodeIdMap.remove(channel);
     }
 
     public synchronized void addChannel(NodeId nodeId, NioChannel channel) {
