@@ -38,7 +38,7 @@ public class ConsoleLaunch {
 //            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 //            properties.store(outputStream, "");
             ClientConfig config = new ClientConfigLoader().load(null);
-            console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap, config), config);
+            console = new Console(endpointMap, handlers, new PollingLoadBalance(config, new Router(endpointMap)), config);
         } catch (IOException e) {
             System.out.println("fail to start console");
             e.printStackTrace();

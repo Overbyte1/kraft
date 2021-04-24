@@ -68,6 +68,7 @@ public class ServerLauncher3 {
         kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
         kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
+        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
 
     }
     public static void main(String[] args) throws IOException {

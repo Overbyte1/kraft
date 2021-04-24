@@ -192,10 +192,15 @@ public class KVDatabaseImpl implements KVDatabase {
             String requestId = modifiedCommand.getRequestId();
             Response<?> response = handlerMap.get(modifiedCommand.getClass()).doHandle(modifiedCommand);
             try {
-                connectorMap.get(requestId).reply(response);
-                connectorMap.remove(requestId);
-                futureMap.get(requestId).cancel(false);
-                futureMap.remove(requestId);
+                Connection connection = connectorMap.get(requestId);
+                //Follower不需要回复客户端
+                if(connection != null) {
+                    connection.reply(response);
+                    connectorMap.remove(requestId);
+                    futureMap.get(requestId).cancel(false);
+                    futureMap.remove(requestId);
+                }
+                //connectorMap.get(requestId).reply(response);
             } catch (Exception exception) {
                 logger.warn("fail to response client, because channel was not found. requestId is: {}", requestId);
             }

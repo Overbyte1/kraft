@@ -2,6 +2,7 @@ package client.handler;
 
 import client.CommandContext;
 import common.message.command.SetCommand;
+import common.message.response.Response;
 
 public class SetHandler extends InlineCommandHandler {
     @Override
@@ -10,16 +11,12 @@ public class SetHandler extends InlineCommandHandler {
     }
 
     @Override
-    public Object doExecute(String[] args, CommandContext commandContext) {
+    public Response<?> doExecute(String[] args, CommandContext commandContext) {
         if(args.length != 2) {
             throw new ParameterException("illegal arguments");
         }
         logger.debug("do set, key/value: [{}]-[{}]", args[0], args[1]);
-        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+        return (Response<?>) commandContext.getLoadBalance().send(new SetCommand(args[0], args[1].getBytes()));
     }
 
-    @Override
-    public Object getSendMessage(String[] args, CommandContext commandContext) {
-        return new SetCommand(args[0], args[1].getBytes());
-    }
 }

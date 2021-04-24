@@ -41,4 +41,14 @@ public class Router {
         return nodeEndpointList;
     }
 
+    public void resetMap(NodeEndpoint[] nodeEndpoints) {
+        nodeEndpointMap.clear();
+        for (NodeEndpoint nodeEndpoint : nodeEndpoints) {
+            nodeEndpointMap.put(nodeEndpoint.getNodeId(), nodeEndpoint.getEndpoint());
+        }
+    }
+
+    public Map<NodeId, Endpoint> getNodeEndpointMap() {
+        return nodeEndpointMap;
+    }
 }

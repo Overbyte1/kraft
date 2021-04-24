@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChannelGroup {
     private static final Logger logger = LoggerFactory.getLogger(ChannelGroup.class);
-    private static final long DEFAULT_IDLE_TIME = 10000;
+    private static final long DEFAULT_IDLE_TIME = 30000;
     private Map<NodeId, NioChannel> channelMap;
     private Map<NioChannel, NodeId> nodeIdMap;
     private final NodeId selfId;
@@ -113,7 +113,7 @@ public class ChannelGroup {
                         if(member.isInline()) {
                             member.setInline(false);
                         }
-                        logger.info("fail to send message: send timeout, exceed {} ms", sendTimeout);
+                        logger.info("fail to send message: send timeout, exceed [{} ms]", sendTimeout);
                     }
                 }
             });
@@ -222,10 +222,11 @@ public class ChannelGroup {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if(evt == IdleStateEvent.ALL_IDLE_STATE_EVENT) {
-                logger.info("no network data with node [{}]  within [{}] ms, close the connection",
+                //TODO:fix, node is null
+                logger.info("no network data with node [{}]  within [{} ms], close the connection",
                         getNodeId(new NioChannel(ctx.channel())), idleTime);
-                ctx.close();
                 removeChannel(new NioChannel(ctx.channel()));
+                ctx.close();
             }
             super.userEventTriggered(ctx, evt);
         }
@@ -241,7 +242,7 @@ public class ChannelGroup {
 
     public synchronized void addChannel(NodeId nodeId, NioChannel channel) {
         if(channelMap.containsKey(nodeId)) {
-            logger.info("connection of nodeId {} is exist", nodeId);
+            logger.info("connection of nodeId {} exist", nodeId);
             return;
         }
         if(channel != null)

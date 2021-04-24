@@ -2,6 +2,8 @@ package client.handler;
 
 import client.CommandContext;
 import common.message.command.GetCommand;
+import common.message.response.Response;
+import common.message.response.SinglePayloadResult;
 
 public class GetHandler extends InlineCommandHandler {
     @Override
@@ -10,16 +12,19 @@ public class GetHandler extends InlineCommandHandler {
     }
 
     @Override
-    public Object doExecute(String[] args, CommandContext commandContext) {
+    public Response<?> doExecute(String[] args, CommandContext commandContext) {
         if(args.length != 1) {
             throw new ParameterException("illegal arguments");
         }
         logger.debug("do get, key: {}", args[0]);
-        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+        return (Response<?>) commandContext.getLoadBalance().send(new GetCommand(args[0]));
     }
 
     @Override
-    public Object getSendMessage(String[] args, CommandContext commandContext) {
-        return new GetCommand(args[0]);
+    public void output(Response<?> msg) {
+        Response<SinglePayloadResult> response = (Response<SinglePayloadResult>) msg;
+        SinglePayloadResult body = response.getBody();
+        System.out.println(bytesToString(body.getPayload()));
     }
+
 }

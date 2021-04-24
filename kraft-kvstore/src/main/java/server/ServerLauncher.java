@@ -41,6 +41,7 @@ public class ServerLauncher {
         kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
         kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
         kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
+        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
 
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();

@@ -264,10 +264,11 @@ public class NodeImpl implements Node {
         if(currentRole instanceof LeaderRole) {
             //添加日志后马上进行日志复制，避免命令执行的延迟过大，如果对实时性要求不高可等待一小段时间后再进行批量日志复制操作，提高吞吐量
             taskExecutor.submit(
-                    (Runnable) () -> {
+                    () -> {
                         log.appendGeneralEntry(currentRole.getCurrentTerm(), command);
-                        logReplicationTask();
-                        resetReplicationTask();
+                        replicationTimeoutFuture.cancel();
+                        doReplication(true);
+                        replicationTimeoutFuture = taskScheduler.scheduleLogReplicationTask(this::logReplicationTask);
                     }, LOGGING_FUTURE_CALLBACK
             );
         }
@@ -323,14 +324,12 @@ public class NodeImpl implements Node {
             replicationTimeoutFuture = null;
             //清除所有member的ReplicationState避免内存泄漏
             clearReplicationState();
-            //TODO：断开网络连接
         } else if(sourceRole instanceof FollowerRole) {
             electionTimeoutFuture.cancel();
             electionTimeoutFuture = null;
         } else if(sourceRole instanceof CandidateRole){
             electionTimeoutFuture.cancel();
             electionTimeoutFuture = null;
-            //TODO：targetRole不是Leader时需要断开网络连接
         }
         assert replicationTimeoutFuture == null;
         assert electionTimeoutFuture == null;
@@ -360,7 +359,7 @@ public class NodeImpl implements Node {
 
     /**
      * 当前节点的角色由Leader变为Follower后，需要清除ReplicationState
-     * TODO：考虑将ReplicationState进行拆分
+     *
      */
     private void clearReplicationState() {
         Collection<GroupMember> allGroupMember = nodeGroup.getAllGroupMember();
@@ -383,48 +382,53 @@ public class NodeImpl implements Node {
     private void logReplicationTask() {
         taskExecutor.submit(
                 () -> {
-                    logger.debug("start replicating log, current node is {}, current term is {}", currentNodeId, currentRole.getCurrentTerm());
-                    //为每个节点都维护上一次复制日志的时间
-                    Collection<GroupMember> groupMembers = nodeGroup.getAllGroupMember();
-                    AppendEntriesMessage generalMessage = null, emptyMessage = null;
-                    for (GroupMember member : groupMembers) {
-                        //跳过自己
-                        if(member.getNodeEndpoint().getNodeId().equals(currentNodeId)) continue;
-
-                        if(member.shouldReplication(logReplicationInterval)) {
-                            AppendEntriesMessage message;
-                            long nextIndex = member.getReplicationState().getNextIndex();
-                            long term = currentRole.getCurrentTerm();
-
-                            //如果该节点在线
-                            if(member.isInline()) {
-                                //判断是否能复用generalMessage，也就是复用 给上一个节点发送的消息
-                                if(generalMessage != null && generalMessage.getTerm() == term
-                                        && generalMessage.getPreLogIndex() == nextIndex - 1) {
-                                    message = generalMessage;
-                                } else {
-                                    message = log.createAppendEntriesMessage(currentNodeId, term, nextIndex);
-                                    generalMessage = message;
-                                }
-
-                            } else { //若节点不在线则发送心跳包探测其存活状态
-                                //判断是否能复用emptyMessage
-                                if(emptyMessage != null && emptyMessage.getTerm() == term
-                                        && emptyMessage.getPreLogIndex() == nextIndex - 1) {
-                                    message = emptyMessage;
-                                } else {
-                                    message = log.createEmptyAppendEntriesMessage(currentNodeId, term, nextIndex);
-                                    emptyMessage = message;
-                                }
-                            }
-                            //更新日志发送时间
-                            member.updateReplicationTime();
-                            rpcHandler.sendAppendEntriesMessage(message, member.getNodeEndpoint());
-                        }
-                    }
+                    doReplication(false);
                 }, LOGGING_FUTURE_CALLBACK
         );
     }
+
+    private void doReplication(boolean executeImmediately) {
+        logger.debug("start replicating log, current node is {}, current term is {}", currentNodeId, currentRole.getCurrentTerm());
+        //为每个节点都维护上一次复制日志的时间
+        Collection<GroupMember> groupMembers = nodeGroup.getAllGroupMember();
+        AppendEntriesMessage generalMessage = null, emptyMessage = null;
+        for (GroupMember member : groupMembers) {
+            //跳过自己
+            if(member.getNodeEndpoint().getNodeId().equals(currentNodeId)) continue;
+
+            if(executeImmediately || member.shouldReplication(logReplicationInterval)) {
+                AppendEntriesMessage message;
+                long nextIndex = member.getReplicationState().getNextIndex();
+                long term = currentRole.getCurrentTerm();
+
+                //如果该节点在线
+                if(member.isInline()) {
+                    //判断是否能复用generalMessage，也就是复用 给上一个节点发送的消息
+                    if(generalMessage != null && generalMessage.getTerm() == term
+                            && generalMessage.getPreLogIndex() == nextIndex - 1) {
+                        message = generalMessage;
+                    } else {
+                        message = log.createAppendEntriesMessage(currentNodeId, term, nextIndex);
+                        generalMessage = message;
+                    }
+
+                } else { //若节点不在线则发送心跳包探测其存活状态
+                    //判断是否能复用emptyMessage
+                    if(emptyMessage != null && emptyMessage.getTerm() == term
+                            && emptyMessage.getPreLogIndex() == nextIndex - 1) {
+                        message = emptyMessage;
+                    } else {
+                        message = log.createEmptyAppendEntriesMessage(currentNodeId, term, nextIndex);
+                        emptyMessage = message;
+                    }
+                }
+                //更新日志发送时间
+                member.updateReplicationTime();
+                rpcHandler.sendAppendEntriesMessage(message, member.getNodeEndpoint());
+            }
+        }
+    }
+
     private void registerHandler(AbstractRole targetRole) {
         Class clazz = targetRole.getClass();
         MessageHandler handler = getMessageHandler(clazz);
@@ -447,7 +451,7 @@ public class NodeImpl implements Node {
             return new CandidateMessageHandler(logger);
         } else if(roleClazz == FollowerRole.class){
             return new FollowerMessageHandler(logger);
-        } else { //TODO:不可能出现的情况，方便调试，Remove it
+        } else {
             logger.error("cannot find MessageHandler, role type is {}", roleClazz);
             return null;
         }

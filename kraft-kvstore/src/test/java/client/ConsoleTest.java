@@ -25,7 +25,8 @@ public class ConsoleTest {
                 new MGetHandler(),
                 new MSetHandler(),
                 new ServerListHandler(),
-                new SetHandler()
+                new SetHandler(),
+                new PingHandler()
         );
         Map<NodeId, Endpoint> endpointMap = new HashMap<>();
         endpointMap.put(new NodeId("A"), new Endpoint("localhost", 8101));
@@ -35,7 +36,7 @@ public class ConsoleTest {
 //        endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
 //        endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
         ClientConfig config = new ClientConfigLoader().load(null);
-        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(endpointMap, config), config);
+        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(config, new Router(endpointMap)), config);
         console.start();
     }
     @Test

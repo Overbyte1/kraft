@@ -2,6 +2,7 @@ package client.handler;
 
 import client.CommandContext;
 import common.message.command.MDelCommand;
+import common.message.response.Response;
 
 import java.util.Arrays;
 
@@ -12,13 +13,9 @@ public class MDelHandler extends InlineCommandHandler {
     }
 
     @Override
-    public Object doExecute(String[] args, CommandContext commandContext) {
+    public Response<?> doExecute(String[] args, CommandContext commandContext) {
         logger.debug("do mdel, keys: {}", Arrays.toString(args));
-        return commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+        return (Response<?>) commandContext.getLoadBalance().send(new MDelCommand(args));
     }
 
-    @Override
-    public Object getSendMessage(String[] args, CommandContext commandContext) {
-        return new MDelCommand(args);
-    }
 }

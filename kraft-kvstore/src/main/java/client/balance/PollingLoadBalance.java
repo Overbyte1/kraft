@@ -1,5 +1,6 @@
 package client.balance;
 
+import client.Router;
 import client.SendTimeoutException;
 import client.SocketChannelImpl;
 import client.config.ClientConfig;
@@ -9,54 +10,73 @@ import org.slf4j.LoggerFactory;
 import rpc.Endpoint;
 import rpc.NodeEndpoint;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 负载均衡策略：轮询
  */
 public class PollingLoadBalance extends AbstractLoadBalance {
     private static final Logger logger = LoggerFactory.getLogger(PollingLoadBalance.class);
-    private List<NodeEndpoint> inlineServerList;
-    private List<NodeEndpoint> timeoutServerList;
-    private Iterator<NodeEndpoint> iterator;
+//    private List<NodeEndpoint> inlineServerList;
+//    private List<NodeEndpoint> timeoutServerList;
+    private final Set<Endpoint> inlineSet;
+    private final Set<Endpoint> outlineSet;
+    private Iterator<Endpoint> iterator;
 
-    public PollingLoadBalance(Map<NodeId, Endpoint> endpointMap, ClientConfig config) {
-        super(new SocketChannelImpl(config.getConnectTimeout()));
-
-        inlineServerList = new LinkedList<>();
+    public PollingLoadBalance(ClientConfig config, Router router) {
+        super(new SocketChannelImpl(config.getConnectTimeout()), router);
+//        inlineServerList = new LinkedList<>();
+        Map<NodeId, Endpoint> endpointMap = router.getNodeEndpointMap();
+        inlineSet = new HashSet<>();
         for (Map.Entry<NodeId, Endpoint> entry : endpointMap.entrySet()) {
-            inlineServerList.add(new NodeEndpoint(entry.getKey(), entry.getValue()));
+            inlineSet.add(entry.getValue());
         }
-        iterator = inlineServerList.listIterator();
+        outlineSet = new HashSet<>();
+        iterator = inlineSet.iterator();
+
     }
 
     @Override
     public Object send(Object msg) {
         Object resp;
-        while (inlineServerList.size() > 0) {
+        while (inlineSet.size() > 0) {
             if(!iterator.hasNext()) {
-                iterator = inlineServerList.listIterator();
+                iterator = inlineSet.iterator();
             }
-            NodeEndpoint nodeEndpoint = iterator.next();
+            Endpoint endpoint = iterator.next();
             try {
-                logger.info("send request to: {}", nodeEndpoint);
-                resp = doSend(nodeEndpoint.getEndpoint(), msg);
+                logger.info("send request to: {}", endpoint);
+                resp = doSend(endpoint, msg);
                 return resp;
             } catch (SendTimeoutException e) {
-                getTimeoutServerList().add(nodeEndpoint);
+                outlineSet.add(endpoint);
                 iterator.remove();
             }
         }
         throw new NoAvailableServerException("no available server");
     }
-    private List<NodeEndpoint> getTimeoutServerList() {
-        if(timeoutServerList == null) {
-            timeoutServerList = new LinkedList<>();
+
+    @Override
+    public Object send(String ip, int port, Object msg) {
+        try {
+            Endpoint endpoint = new Endpoint(ip, port);
+            Object resp = doSend(endpoint, msg);
+
+            if(outlineSet.contains(endpoint)) {
+                outlineSet.remove(endpoint);
+                inlineSet.add(endpoint);
+                iterator = inlineSet.iterator();
+            }
+            return resp;
+        } catch (SendTimeoutException e) {
+            logger.info("send timeout: endpoint[{}:{}], message: {}", ip, port, msg);
+            throw e;
         }
-        return timeoutServerList;
+    }
+
+    @Override
+    public void initRouter(NodeEndpoint[] nodeEndpoints) {
+        router.resetMap(nodeEndpoints);
     }
 
 }
