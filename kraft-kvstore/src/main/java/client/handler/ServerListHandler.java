@@ -18,6 +18,11 @@ public class ServerListHandler extends InlineCommandHandler {
 
 
     @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
+        return new ServerListCommand();
+    }
+
+    @Override
     public void output(Response<?> msg) {
         NodeEndpoint[] nodeEndpoints = (NodeEndpoint[])(msg.getBody());
         Arrays.sort(nodeEndpoints, Comparator.comparing(NodeEndpoint::getNodeId));
@@ -29,7 +34,7 @@ public class ServerListHandler extends InlineCommandHandler {
 
     @Override
     protected Response<?> doExecute(String[] args, CommandContext commandContext) {
-        Response<?> response =  (Response<?>) commandContext.getLoadBalance().send(new ServerListCommand());
+        Response<?> response =  (Response<?>) commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
         if(response.getType() == ResponseType.SUCCEED) {
             NodeEndpoint[] nodeEndpoints = (NodeEndpoint[])(response.getBody());
             commandContext.getLoadBalance().initRouter(nodeEndpoints);

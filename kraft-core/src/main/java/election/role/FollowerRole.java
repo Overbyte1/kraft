@@ -3,18 +3,28 @@ package election.role;
 import election.node.NodeId;
 
 public class FollowerRole extends AbstractRole {
-    public FollowerRole(long term) {
+    private NodeId leaderId;
+
+    public FollowerRole(long term, NodeId leaderId) {
         super(term);
+        this.leaderId = leaderId;
     }
     public FollowerRole(NodeId nodeId, long currentTerm) {
-        this(nodeId, RoleType.FOLLOWER, currentTerm, null);
+        this(nodeId, RoleType.FOLLOWER, currentTerm, null, null);
     }
-    public FollowerRole(NodeId nodeId, long currentTerm, NodeId voteFor) {
-        this(nodeId, RoleType.FOLLOWER, currentTerm, voteFor);
+    public FollowerRole(NodeId nodeId, long currentTerm, NodeId leaderId) {
+        this(nodeId, RoleType.FOLLOWER, currentTerm, leaderId, null);
     }
-    public FollowerRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
+    public FollowerRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId leaderId, NodeId voteFor) {
         super(nodeId, roleType, currentTerm, voteFor);
+        this.leaderId = leaderId;
     }
+
+    @Override
+    public NodeId getLeaderId() {
+        return leaderId;
+    }
+
 
     @Override
     public boolean equals(Object obj) {

@@ -18,6 +18,7 @@ public class LeaderCommandHandler implements CommandHandler {
 
     @Override
     public Response doHandle(Object command) {
+
         return new Response(ResponseType.SUCCEED, node.getLeaderNodeEndpoint());
     }
 }

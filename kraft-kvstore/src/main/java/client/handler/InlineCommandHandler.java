@@ -27,6 +27,8 @@ public abstract class InlineCommandHandler implements CommandHandler, ConsoleOut
             System.out.println("error:" + e.getMessage());
         }
     }
+    //TODO:语法合法性检查
+    public abstract Object getSendMessage(String[] args, CommandContext commandContext);
 
 
     @Override

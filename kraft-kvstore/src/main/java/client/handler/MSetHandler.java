@@ -4,6 +4,8 @@ import client.CommandContext;
 import common.message.command.MSetCommand;
 import common.message.response.Response;
 
+import java.util.Arrays;
+
 public class MSetHandler extends InlineCommandHandler {
     @Override
     public String getCommandName() {
@@ -12,8 +14,9 @@ public class MSetHandler extends InlineCommandHandler {
 
     @Override
     public Response<?> doExecute(String[] args, CommandContext commandContext) {
-
-        return (Response<?>) commandContext.getLoadBalance().send(getSendMessage(args, commandContext));
+        Object msg = getSendMessage(args, commandContext);
+        logger.debug("do mset: {}", Arrays.toString(args));
+        return (Response<?>) commandContext.getLoadBalance().send(msg);
     }
 
 

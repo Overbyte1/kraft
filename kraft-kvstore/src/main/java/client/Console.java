@@ -4,6 +4,7 @@ import client.balance.LoadBalance;
 import client.config.ClientConfig;
 import client.config.ClientConfigLoader;
 import client.handler.CommandHandler;
+import client.handler.InlineCommandHandler;
 import election.node.NodeId;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -34,7 +35,9 @@ public class Console {
     public Console(Map<NodeId, Endpoint> serverMap, List<CommandHandler> handlerList, LoadBalance loadBalance, ClientConfig config) {
         commandMap = buildCommandMap(handlerList);
 
-        commandContext = new CommandContext(serverMap, loadBalance, config);
+        Map<String, InlineCommandHandler> inlineCommandMap = buildInlineMap(handlerList);
+
+        commandContext = new CommandContext(serverMap, loadBalance, config, inlineCommandMap);
 
         ArgumentCompleter completer = new ArgumentCompleter(
                 new StringsCompleter(commandMap.keySet()),
@@ -51,6 +54,15 @@ public class Console {
             commandMap.put(cmd.getCommandName(), cmd);
         }
         return commandMap;
+    }
+    private Map<String, InlineCommandHandler> buildInlineMap(Collection<CommandHandler> commands) {
+        Map<String, InlineCommandHandler> inlineCommandMap = new HashMap<>();
+        for (CommandHandler cmd : commands) {
+            if(cmd instanceof InlineCommandHandler) {
+                inlineCommandMap.put(cmd.getCommandName(), (InlineCommandHandler) cmd);
+            }
+        }
+        return inlineCommandMap;
     }
 
     void start() {

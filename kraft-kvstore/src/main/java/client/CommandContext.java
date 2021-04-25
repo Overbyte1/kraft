@@ -2,6 +2,7 @@ package client;
 
 import client.balance.LoadBalance;
 import client.config.ClientConfig;
+import client.handler.InlineCommandHandler;
 import election.node.NodeId;
 import rpc.Endpoint;
 
@@ -12,12 +13,15 @@ public class CommandContext {
     private final Router router;
     private final LoadBalance loadBalance;
     private final ClientConfig config;
+    private final Map<String, InlineCommandHandler> inlineCommandHandlerMap;
 
-    public CommandContext(Map<NodeId, Endpoint> serverMap, LoadBalance loadBalance, ClientConfig config) {
+    public CommandContext(Map<NodeId, Endpoint> serverMap, LoadBalance loadBalance, ClientConfig config, Map<String,
+            InlineCommandHandler> inlineCommandHandlerMap) {
         running = false;
         this.router = new Router(serverMap);
         this.loadBalance = loadBalance;
         this.config = config;
+        this.inlineCommandHandlerMap = inlineCommandHandlerMap;
     }
 
     public boolean isRunning() {
@@ -33,6 +37,10 @@ public class CommandContext {
 
     public LoadBalance getLoadBalance() {
         return loadBalance;
+    }
+
+    public Map<String, InlineCommandHandler> getInlineCommandHandlerMap() {
+        return inlineCommandHandlerMap;
     }
 
     public ClientConfig getConfig() {

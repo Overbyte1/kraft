@@ -17,6 +17,12 @@ public class CandidateRole extends AbstractRole {
     public CandidateRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
         super(nodeId, roleType, currentTerm, voteFor);
     }
+
+    @Override
+    public NodeId getLeaderId() {
+        return null;
+    }
+
     public synchronized void incVoteCount() {
         voteCount++;
     }

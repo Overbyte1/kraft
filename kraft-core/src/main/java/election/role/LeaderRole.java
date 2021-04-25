@@ -8,10 +8,15 @@ public class LeaderRole extends AbstractRole {
         super(term);
     }
     public LeaderRole(NodeId nodeId, long term) {
-        this(nodeId, RoleType.LEADER, term, null);
+        this(nodeId, RoleType.LEADER, term, nodeId);
     }
     public LeaderRole(NodeId nodeId, RoleType roleType, long currentTerm, NodeId voteFor) {
         super(nodeId, roleType, currentTerm, voteFor);
+    }
+
+    @Override
+    public NodeId getLeaderId() {
+        return getNodeId();
     }
 
     @Override

@@ -43,6 +43,7 @@ public abstract class AbstractRole {
         this.currentTerm = currentTerm;
         this.voteFor = voteFor;
     }
+    public abstract NodeId getLeaderId();
 
 
     public NodeId getNodeId() {

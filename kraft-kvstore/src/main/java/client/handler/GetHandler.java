@@ -13,11 +13,17 @@ public class GetHandler extends InlineCommandHandler {
 
     @Override
     public Response<?> doExecute(String[] args, CommandContext commandContext) {
+        Object msg = getSendMessage(args, commandContext);
+        logger.debug("do get, key: {}", args[0]);
+        return (Response<?>) commandContext.getLoadBalance().send(msg);
+    }
+
+    @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
         if(args.length != 1) {
             throw new ParameterException("illegal arguments");
         }
-        logger.debug("do get, key: {}", args[0]);
-        return (Response<?>) commandContext.getLoadBalance().send(new GetCommand(args[0]));
+        return new GetCommand(args[0]);
     }
 
     @Override

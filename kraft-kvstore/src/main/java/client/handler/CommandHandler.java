@@ -8,4 +8,5 @@ public interface CommandHandler {
     Logger logger = LoggerFactory.getLogger(CommandHandler.class);
     String getCommandName();
     void execute(String[] args, CommandContext commandContext);
+    //Object getSendMessage(String[] args, CommandContext commandContext);
 }

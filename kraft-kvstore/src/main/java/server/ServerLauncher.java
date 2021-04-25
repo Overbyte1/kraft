@@ -12,12 +12,18 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDBException;
 import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
+import server.store.RocksDBTransactionKVStore;
+import server.store.TransactionKVStore;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 
 public class ServerLauncher {
@@ -26,22 +32,35 @@ public class ServerLauncher {
     private Channel channel;
     private CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
     private TestHandle testHandle = new TestHandle(cyclicBarrier);
-    private KVStore kvStore = new MemHTKVStore();
 
+
+
+    private KVStore getTrxKvStore() throws RocksDBException {
+        Options options = new Options();
+        options.setCreateIfMissing(true);
+        KVStore transactionKVStore = new RocksDBTransactionKVStore(options);
+        return transactionKVStore;
+    }
+    private KVStore getMemKVStore() {
+        return new MemHTKVStore();
+    }
 
     public void init() throws IOException {
         node = new NodeMock();
         kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
+        Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
         kvDatabase.start();
-        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
-        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(DelCommand.class, new DelCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MDelCommand.class, new MDelCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MSetCommand.class, new MSetCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
-        kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
-        kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
-        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
+        KVStore kvStore = getMemKVStore();
+        handlerMap.put(GetCommand.class, new GetCommandHandler(kvStore));
+        handlerMap.put(SetCommand.class, new SetCommandHandler(kvStore, node));
+        handlerMap.put(DelCommand.class, new DelCommandHandler(kvStore, node));
+        handlerMap.put(MDelCommand.class, new MDelCommandHandler(kvStore, node));
+        handlerMap.put(MSetCommand.class, new MSetCommandHandler(kvStore, node));
+        handlerMap.put(MGetCommand.class, new MGetCommandHandler(kvStore));
+        handlerMap.put(LeaderCommand.class, new LeaderCommandHandler(node));
+        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node));
+        handlerMap.put(PingCommand.class, new PingCommandHandler());
+        handlerMap.put(TrxCommand.class, new TrxCommandHandler(node, (TransactionKVStore)kvStore, handlerMap));
 
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();

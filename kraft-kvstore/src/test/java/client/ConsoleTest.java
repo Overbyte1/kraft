@@ -26,15 +26,13 @@ public class ConsoleTest {
                 new MSetHandler(),
                 new ServerListHandler(),
                 new SetHandler(),
-                new PingHandler()
+                new PingHandler(),
+                new TrxCommandHandler()
         );
         Map<NodeId, Endpoint> endpointMap = new HashMap<>();
         endpointMap.put(new NodeId("A"), new Endpoint("localhost", 8101));
-        endpointMap.put(new NodeId("B"), new Endpoint("localhost", 8102));
-        endpointMap.put(new NodeId("C"), new Endpoint("localhost", 8103));
-//        endpointMap.put(new NodeId("A"), new Endpoint("1111111111111", 1234));
-//        endpointMap.put(new NodeId("C"), new Endpoint("3333333333333", 1236));
-//        endpointMap.put(new NodeId("D"), new Endpoint("4444444444444", 1237));
+//        endpointMap.put(new NodeId("B"), new Endpoint("localhost", 8102));
+//        endpointMap.put(new NodeId("C"), new Endpoint("localhost", 8103));
         ClientConfig config = new ClientConfigLoader().load(null);
         Console console = new Console(endpointMap, handlers, new PollingLoadBalance(config, new Router(endpointMap)), config);
         console.start();
@@ -49,7 +47,7 @@ public class ConsoleTest {
     public static void main(String[] args) throws IOException {
         ConsoleTest consoleTest = new ConsoleTest();
         consoleTest.testStart();
-        //TODO:follower节点进行修改操作时不需要回复客户端
+        //TODO:添加允许Follower读的选项
     }
 
 }

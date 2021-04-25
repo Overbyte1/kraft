@@ -287,7 +287,8 @@ public class NodeImpl implements Node {
     @Override
     public NodeEndpoint getLeaderNodeEndpoint() {
         Callable<NodeEndpoint> task = () -> {
-            NodeId voteFor = currentRole.getVoteFor();
+            //Candidate的voteFor是他自身nodeId
+            NodeId voteFor = currentRole.getLeaderId();
             if (voteFor != null) {
                 return nodeGroup.getGroupMember(voteFor).getNodeEndpoint();
             }
@@ -471,7 +472,7 @@ public class NodeImpl implements Node {
         logger.debug("start election, new term is {}", currentRole.getCurrentTerm() + 1);
 
         //将角色更改为Candidate，term + 1
-        becomeToRole(new CandidateRole(currentRole.getNodeId(), currentRole.getCurrentTerm() + 1, null));
+        becomeToRole(new CandidateRole(currentNodeId, currentRole.getCurrentTerm() + 1, currentNodeId));
 
         //向所有节点发送请求投票rpc
         RequestVoteMessage requestVoteMessage = log.createRequestVoteMessage(currentNodeId, currentRole.getCurrentTerm());
@@ -566,7 +567,7 @@ public class NodeImpl implements Node {
                 logger.debug("receive AppendEntriesResultMessage, term is {}", term);
                 //electionTimeoutFuture.cancel(true);
 
-                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term, appendRequestMsg.getLeaderId()));
 
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
                 long preTerm = appendRequestMsg.getPreLogTerm();
@@ -622,6 +623,7 @@ public class NodeImpl implements Node {
             boolean voteGranted = voteResultMessage.isVoteGranted();
             NodeId currentNodeId = currentRole.getNodeId();
             if(messageTerm > currentTerm) {
+                //变成Follower而不投票
                 becomeToRole(new FollowerRole(currentNodeId, messageTerm));
                 return;
             }
@@ -681,8 +683,8 @@ public class NodeImpl implements Node {
                 return new AppendEntriesResultMessage(currentTerm, false);
             }
             if(currentTerm < term) {
-                //TODO：断开与其他节点的网络连接，保留与Leader的连接
-                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                //TODO：设置voteFor？
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term, appendRequestMsg.getLeaderId()));
             }
 
             List<Entry> entryList = appendRequestMsg.getLogEntryList();
@@ -761,7 +763,7 @@ public class NodeImpl implements Node {
                 logger.info("detect new Leader, Leader's node id is {}. " +
                         "current role become Follower from Leader, new term is {}, old term is {}",
                         message.getNodeId(), term, currentTerm);
-                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term, appendRequestMsg.getLeaderId()));
 
                 List<Entry> entryList = appendRequestMsg.getLogEntryList();
                 long preTerm = appendRequestMsg.getPreLogTerm();
@@ -829,7 +831,7 @@ public class NodeImpl implements Node {
             if(term > currentRole.getCurrentTerm()) {
                 logger.info("detect remote node's term {} > current term {}, become Follower from Leader, remote node is {}",
                         term, currentRole.getCurrentTerm(), message.getNodeId());
-                becomeToRole(new FollowerRole(currentRole.getNodeId(), term));
+                becomeToRole(new FollowerRole(currentRole.getNodeId(), term, null));
                 return;
             }
 

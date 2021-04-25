@@ -12,6 +12,11 @@ public class PingHandler extends InlineCommandHandler {
 
 
     @Override
+    public Object getSendMessage(String[] args, CommandContext commandContext) {
+        return null;
+    }
+
+    @Override
     public void output(Response<?> msg) {
         System.out.println("pong");
     }
