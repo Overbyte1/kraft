@@ -1,6 +1,8 @@
 package server.store;
 
-public interface KVStore {
+import java.io.Closeable;
+
+public interface KVStore extends Closeable {
     void set(String key, byte[] value);
     void del(String key);
     boolean containsKey(String key);

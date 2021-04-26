@@ -9,6 +9,7 @@ import org.rocksdb.RocksDBException;
 import org.rocksdb.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import server.store.KVTransaction;
 import server.store.TransactionKVStore;
 import utils.SerializationUtil;
 
@@ -42,23 +43,30 @@ public class TrxCommandHandler implements CommandHandler {
     @Override
     public Response doHandle(Object command) {
         TrxCommand trxCommand = (TrxCommand)command;
-        Transaction transaction = null;
+        KVTransaction transaction = null;
         try {
             transaction = kvStore.begin();
             List<Object> commands = trxCommand.getCommands();
             Response<?>[] responses = new Response[commands.size()];
             int index = 0;
             for (Object cmd : commands) {
-                Response<?> resp = commandHandlerMap.get(cmd.getClass()).handleCommand(cmd);
-                responses[index] = resp;
-                index++;
+                CommandHandler commandHandler = commandHandlerMap.get(cmd.getClass());
+                if(commandHandler instanceof TransactionCommandHandler) {
+                    Response<?> resp = ((TransactionCommandHandler)commandHandler).doHandle(cmd, transaction);
+                    responses[index] = resp;
+                    index++;
+                } else {
+                    //该命令不支持事务
+                    transaction.rollback();
+                    return new Response(ResponseType.FAILURE, FailureResult.TRX_FAIL);
+                }
             }
-            kvStore.commit(transaction);
+            transaction.commit();
             return new Response(ResponseType.SUCCEED, responses);
         } catch (Exception e) {
             try {
                 if(transaction != null)
-                    kvStore.rollback(transaction);
+                    transaction.rollback();
             } catch (RocksDBException rocksDBException) {
                 rocksDBException.printStackTrace();
             }

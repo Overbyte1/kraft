@@ -9,9 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import server.store.KVStore;
 
-public class GetCommandHandler implements CommandHandler {
+public class GetCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(GetCommandHandler.class);
-    private KVStore kvStore;
+    //private KVStore kvStore;
 
     public GetCommandHandler(KVStore kvStore) {
         this.kvStore = kvStore;
@@ -23,8 +23,9 @@ public class GetCommandHandler implements CommandHandler {
         return doHandle(command);
     }
 
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         GetCommand getCommand = (GetCommand) command;
         byte[] bytes = kvStore.get(getCommand.getKey());
         logger.debug("do get operation: [{}]-[{}]", ((GetCommand) command).getKey(), bytes);

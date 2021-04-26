@@ -10,10 +10,10 @@ import utils.SerializationUtil;
 
 import java.io.IOException;
 
-public class SetCommandHandler implements CommandHandler {
+public class SetCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(SetCommandHandler.class);
 
-    private KVStore kvStore;
+    //private KVStore kvStore;
     private Node node;
 
     public SetCommandHandler(KVStore kvStore, Node node) {
@@ -34,8 +34,10 @@ public class SetCommandHandler implements CommandHandler {
         return null;
     }
 
+
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         SetCommand setCommand = (SetCommand)command;
         kvStore.set(setCommand.getKey(), setCommand.getValue());
         logger.debug("do set operation: [{}]-[{}]", setCommand.getKey(), new String(setCommand.getValue()));

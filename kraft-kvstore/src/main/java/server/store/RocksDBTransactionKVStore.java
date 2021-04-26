@@ -67,19 +67,10 @@ public class RocksDBTransactionKVStore implements TransactionKVStore {
     }
 
     @Override
-    public Transaction begin() {
-        return ((TransactionDB) transactionDb).beginTransaction(new WriteOptions());
+    public KVTransaction begin() {
+        return new RocksDBKVTransaction(transactionDb.beginTransaction(new WriteOptions()));
     }
 
-    @Override
-    public void commit(Transaction transaction) throws RocksDBException {
-        transaction.commit();
-    }
-
-    @Override
-    public void rollback(Transaction transaction) throws RocksDBException {
-        transaction.rollback();
-    }
 
     @Override
     public void close() {

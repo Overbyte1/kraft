@@ -10,9 +10,9 @@ import utils.SerializationUtil;
 
 import java.io.IOException;
 
-public class DelCommandHandler implements CommandHandler {
+public class DelCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(DelCommandHandler.class);
-    private KVStore kvStore;
+    //private KVStore kvStore;
     private Node node;
 
     public DelCommandHandler(KVStore kvStore, Node node) {
@@ -36,8 +36,9 @@ public class DelCommandHandler implements CommandHandler {
         return null;
     }
 
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         DelCommand delCommand = (DelCommand) command;
         kvStore.del(delCommand.getKey());
         logger.debug("do del: [{}]", delCommand.getKey());

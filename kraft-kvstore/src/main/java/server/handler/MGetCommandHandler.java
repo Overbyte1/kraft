@@ -11,9 +11,9 @@ import server.store.KVStore;
 
 import java.util.Arrays;
 
-public class MGetCommandHandler implements CommandHandler {
+public class MGetCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(MGetCommandHandler.class);
-    private KVStore kvStore;
+    //private KVStore kvStore;
 
     public MGetCommandHandler(KVStore kvStore) {
         this.kvStore = kvStore;
@@ -24,8 +24,9 @@ public class MGetCommandHandler implements CommandHandler {
         return doHandle(command);
     }
 
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         MGetCommand mGetCommand = (MGetCommand) command;
         String[] keys = mGetCommand.getKeys();
         byte[][] payload = new byte[keys.length][];

@@ -11,9 +11,8 @@ import utils.SerializationUtil;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class MDelCommandHandler implements CommandHandler {
+public class MDelCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(MDelCommandHandler.class);
-    private KVStore kvStore;
     private Node node;
 
     public MDelCommandHandler(KVStore kvStore, Node node) {
@@ -44,8 +43,9 @@ public class MDelCommandHandler implements CommandHandler {
         return null;
     }
 
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         MDelCommand mDelCommand = (MDelCommand) command;
         for(String key : mDelCommand.getKey()) {
             logger.debug("do del: [{}]", key);

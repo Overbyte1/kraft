@@ -11,12 +11,13 @@ import utils.SerializationUtil;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class MSetCommandHandler implements CommandHandler {
+public class MSetCommandHandler extends AbstractTransactionCommandHandler {
     private static final Logger logger = LoggerFactory.getLogger(MSetCommandHandler.class);
-    private KVStore kvStore;
+    //private KVStore kvStore;
     private Node node;
 
     public MSetCommandHandler(KVStore kvStore, Node node) {
+        //super(kvStore);
         this.kvStore = kvStore;
         this.node = node;
     }
@@ -34,8 +35,9 @@ public class MSetCommandHandler implements CommandHandler {
         return null;
     }
 
+
     @Override
-    public Response doHandle(Object command) {
+    public Response doHandle(Object command, KVStore kvStore) {
         MSetCommand mSetCommand = (MSetCommand) command;
         String[] keys = mSetCommand.getKeys();
         byte[][] values = mSetCommand.getValues();

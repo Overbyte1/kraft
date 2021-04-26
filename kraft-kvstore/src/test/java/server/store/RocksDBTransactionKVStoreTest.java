@@ -5,47 +5,32 @@ import org.rocksdb.Options;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Transaction;
 
+import java.io.IOException;
+
 import static org.junit.Assert.*;
 
 public class RocksDBTransactionKVStoreTest {
 
     @Test
-    public void begin() throws RocksDBException {
-
-    }
-
-    @Test
-    public void commit() throws RocksDBException {
+    public void begin() throws RocksDBException, IOException {
         Options options = new Options();
         options.setCreateIfMissing(true);
         String path = "./testRocksDbTrx/";
         TransactionKVStore kvStore = new RocksDBTransactionKVStore(options, path);
         String key = "kk", value = "vv";
-        Transaction transaction = kvStore.begin();
-        kvStore.set(key, value.getBytes());
-        //
-        kvStore.commit(transaction);
+
+        KVTransaction transaction = kvStore.begin();
+        transaction.set(key, value.getBytes());
+        //commit
+        transaction.commit();
 
         assertArrayEquals(value.getBytes(), kvStore.get(key));
         kvStore.del(key);
         assertArrayEquals(null, kvStore.get(key));
+
+        transaction.close();
         kvStore.close();
+        options.close();
     }
 
-    @Test
-    public void rollback() throws RocksDBException {
-        Options options = new Options();
-        options.setCreateIfMissing(true);
-        String path = "./testRocksDbTrx/";
-        TransactionKVStore kvStore = new RocksDBTransactionKVStore(options, path);
-        String key = "kk", value = "vv";
-        Transaction transaction = kvStore.begin();
-        kvStore.set(key, value.getBytes());
-        //TODO:封装一个Transaction
-        kvStore.rollback(transaction);
-
-        byte[] bytes = kvStore.get(key);
-        System.out.println(new String(bytes));
-        kvStore.close();
-    }
 }
