@@ -75,6 +75,7 @@ public class RocksDBTransactionKVStore implements TransactionKVStore {
     @Override
     public void close() {
         transactionDb.close();
+        dbOptions.close();
         options.close();
         logger.debug("rocksDB was closed!");
 

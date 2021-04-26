@@ -13,10 +13,12 @@ public abstract class InlineCommandHandler implements CommandHandler, ConsoleOut
             Response<?> resp = doExecute(args, commandContext);
 
             int type = resp.getType();
-            if(resp.getType() == ResponseType.REDIRECT) {
-                logger.info("redirect");
-                execute(args, commandContext);
-            } else if(type == ResponseType.FAILURE) {
+//            if(resp.getType() == ResponseType.REDIRECT) {
+//                logger.info("redirect");
+//                execute(args, commandContext);
+//            } else
+            //重定向由SockChannelImpl负责
+            if(type == ResponseType.FAILURE) {
                 System.out.println("error: " + ((FailureResult)(resp.getBody())).getErrorMessage());
             } else {
                 output(resp);

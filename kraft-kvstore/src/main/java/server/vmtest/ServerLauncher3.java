@@ -19,6 +19,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDBException;
 import server.KVDatabase;
 import server.KVDatabaseImpl;
 import server.ServerLauncher;
@@ -28,23 +30,27 @@ import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
+import server.store.RocksDBTransactionKVStore;
+import server.store.TransactionKVStore;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 
 public class ServerLauncher3 {
-    private Node node;
     private KVDatabase kvDatabase;
-    private Channel channel;
-    private CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
-    private TestHandle testHandle = new TestHandle(cyclicBarrier);
-    private KVStore kvStore = new MemHTKVStore();
 
-    private void buildNode() throws IOException {
+    private Node buildNode() throws IOException {
+        File file = new File(".");
+        System.out.println(file.getAbsolutePath());
         ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft3.json"), ClusterConfig.class);
+        System.out.println(config);
+
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        node = builder.withId("C")
+        return builder.withId("C")
                 .withListenPort(config.getPort())
                 .withLogReplicationInterval(config.getLogReplicationInterval())
                 .withNodeList(config.getMembers())
@@ -53,50 +59,55 @@ public class ServerLauncher3 {
                 .build();
     }
 
-    public void init() throws IOException {
-        buildNode();
-        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server3.json"), ServerConfig.class);
-        System.out.println(config);
-        kvDatabase = new KVDatabaseImpl(node, config);
+    private KVStore getTrxKvStore() throws RocksDBException {
+        Options options = new Options();
+        options.setCreateIfMissing(true);
+        KVStore transactionKVStore = new RocksDBTransactionKVStore(options, "./db/C/");
+        return transactionKVStore;
+    }
+    private KVStore getMemKVStore() {
+        return new MemHTKVStore();
+    }
 
+    public void init() throws IOException, RocksDBException {
+        Node node = buildNode();
+        KVStore kvStore = getTrxKvStore();
+        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server3.json"), ServerConfig.class);
+
+        kvDatabase = new KVDatabaseImpl(node, config);
+//        kvDatabase.start();
+//        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
+//        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
+//        kvDatabase.registerCommandHandler(DelCommand.class, new DelCommandHandler(kvStore, node));
+//        kvDatabase.registerCommandHandler(MDelCommand.class, new MDelCommandHandler(kvStore, node));
+//        kvDatabase.registerCommandHandler(MSetCommand.class, new MSetCommandHandler(kvStore, node));
+//        kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
+//        kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
+//        kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
+//        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
+
+        Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
         kvDatabase.start();
-        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
-        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(DelCommand.class, new DelCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MDelCommand.class, new MDelCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MSetCommand.class, new MSetCommandHandler(kvStore, node));
-        kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
-        kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
-        kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
-        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
+
+        handlerMap.put(GetCommand.class, new GetCommandHandler(kvStore));
+        handlerMap.put(SetCommand.class, new SetCommandHandler(kvStore, node));
+        handlerMap.put(DelCommand.class, new DelCommandHandler(kvStore, node));
+        handlerMap.put(MDelCommand.class, new MDelCommandHandler(kvStore, node));
+        handlerMap.put(MSetCommand.class, new MSetCommandHandler(kvStore, node));
+        handlerMap.put(MGetCommand.class, new MGetCommandHandler(kvStore));
+        handlerMap.put(LeaderCommand.class, new LeaderCommandHandler(node));
+        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node));
+        handlerMap.put(PingCommand.class, new PingCommandHandler());
+        handlerMap.put(TrxCommand.class, new TrxCommandHandler(node, (TransactionKVStore)kvStore, handlerMap));
+
+        for (Map.Entry<Class<?>, CommandHandler> entry : handlerMap.entrySet()) {
+            kvDatabase.registerCommandHandler(entry.getKey(), entry.getValue());
+        }
 
     }
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, RocksDBException {
         ServerLauncher3 launcher = new ServerLauncher3();
         launcher.init();
     }
 }
 
-//class TestHandle extends ChannelInboundHandlerAdapter {
-//    private Object receiveMessage;
-//    private CyclicBarrier cyclicBarrier;
-//
-//    public TestHandle(CyclicBarrier cyclicBarrier) {
-//        this.cyclicBarrier = cyclicBarrier;
-//    }
-//
-//    @Override
-//    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-//        System.out.println("client receive message: " + msg);
-//        receiveMessage = msg;
-//        cyclicBarrier.await();
-//        super.channelRead(ctx, msg);
-//    }
-//
-//    public Object getReceiveMessage() {
-//        return receiveMessage;
-//    }
-//    public void resetMsg() {
-//        receiveMessage = null;
-//    }
-//}

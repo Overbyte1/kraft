@@ -48,7 +48,8 @@ public class TrxCommandHandler extends InlineCommandHandler {
 
     @Override
     public Response<?> doExecute(String[] args, CommandContext commandContext) {
-
+        commit = false;
+        rollback = false;
         List<Object> commands = new ArrayList<>();
         commandNames = new ArrayList<>();
 
@@ -71,6 +72,7 @@ public class TrxCommandHandler extends InlineCommandHandler {
                 if(msg != null) {
                     commands.add(msg.getMsg());
                     commandNames.add(msg.getName());
+                    System.out.println("queued");
                 } else {
                     break;
                 }
