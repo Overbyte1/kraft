@@ -70,4 +70,9 @@ public class RocksDBKVStore implements KVStore {
         logger.debug("rocksDB was closed!");
 
     }
+
+    @Override
+    public KVStoreIterator newIterator() {
+        return new RocksDBKVStoreIterator(rocksDB.newIterator());
+    }
 }

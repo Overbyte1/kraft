@@ -62,6 +62,12 @@ public class RocksDBKVTransaction implements  KVTransaction{
         transaction.close();
     }
 
+    @Override
+    public KVStoreIterator newIterator() {
+        //TODO:隔离级别
+        return new RocksDBKVStoreIterator(transaction.getIterator(new ReadOptions()));
+    }
+
 
     @Override
     public void commit() throws RocksDBException {

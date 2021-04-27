@@ -8,4 +8,5 @@ public interface KVStore extends Closeable {
     boolean containsKey(String key);
     byte[] get(String key);
     void close();
+    KVStoreIterator newIterator();
 }

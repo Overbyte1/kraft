@@ -29,4 +29,9 @@ public class MemHTKVStore implements KVStore {
     public void close() {
 
     }
+
+    @Override
+    public KVStoreIterator newIterator() {
+        return null;
+    }
 }

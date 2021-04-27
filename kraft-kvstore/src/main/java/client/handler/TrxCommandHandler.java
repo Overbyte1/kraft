@@ -3,7 +3,6 @@ package client.handler;
 import client.CommandContext;
 import common.message.command.TrxCommand;
 import common.message.response.FailureResult;
-import common.message.response.MultiPayloadResult;
 import common.message.response.Response;
 import common.message.response.ResponseType;
 import org.jline.reader.EndOfFileException;
