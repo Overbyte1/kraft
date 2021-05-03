@@ -1,9 +1,7 @@
 package server.store;
 
 import org.junit.Test;
-import org.rocksdb.Options;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.Transaction;
+import org.rocksdb.*;
 
 import java.io.IOException;
 
@@ -33,4 +31,24 @@ public class RocksDBTransactionKVStoreTest {
         options.close();
     }
 
+    @Test
+    public void newIterator() throws RocksDBException {
+        Options options = new Options();
+        options.setCreateIfMissing(true);
+        String path = "./testRocksDbTrx/";
+        //TransactionKVStore kvStore = new RocksDBTransactionKVStore(options, path);
+        String key = "kk", value = "vv";
+
+        //kvStore.set(key, value.getBytes());
+        //TransactionDB transactionDB = TransactionDB.open(options,new TransactionDBOptions(), path);
+        RocksDB rocksDB = RocksDB.open(options, path);
+        RocksIterator iterator = rocksDB.newIterator();
+        iterator.seekToFirst();
+//        RocksIterator iterator = transactionDB.newIterator();
+
+//        KVStoreIterator iterator = kvStore.newIterator();
+//
+        System.out.println(iterator.key() + " " + iterator.value());
+
+    }
 }

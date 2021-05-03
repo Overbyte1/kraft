@@ -28,7 +28,9 @@ import server.store.KVStore;
 import server.store.MemHTKVStore;
 import utils.SerializationUtil;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -45,6 +47,8 @@ public class KVDatabaseImpl implements KVDatabase {
     private final Map<String, Future<?>> futureMap = new ConcurrentHashMap<>();
     private final Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
     private final StateMachine stateMachine = new DefaultStateMachine();
+    private final List<KVListener> beforeListenerList = new ArrayList<>();
+    private final List<KVListener> afterListenerList = new ArrayList<>();
 
     private final int NCPU = Runtime.getRuntime().availableProcessors() * 2;
     //TODO:
@@ -149,6 +153,8 @@ public class KVDatabaseImpl implements KVDatabase {
 
     @Override
     public void handleCommand(Connection connection) {
+        notifyListener(beforeListenerList, connection.getCommand());
+
         if(!node.isLeader()) {
             redirectOrFail(connection);
             return;
@@ -164,7 +170,14 @@ public class KVDatabaseImpl implements KVDatabase {
         }
         Response<?> response = handlerMap.get(command.getClass()).handleCommand(command);
         if(response != null) {
+            notifyListener(afterListenerList, connection.getCommand());
             connection.reply(response);
+        }
+    }
+
+    private void notifyListener(List<KVListener> listeners, Object arg) {
+        for (KVListener listener : listeners) {
+            listener.listen(arg);
         }
     }
 
@@ -176,6 +189,16 @@ public class KVDatabaseImpl implements KVDatabase {
     @Override
     public void unregisterCommandHandler(Class<?> clazz) {
         handlerMap.remove(clazz);
+    }
+
+    @Override
+    public void addBeforeListener(KVListener listener) {
+        beforeListenerList.add(listener);
+    }
+
+    @Override
+    public void addAfterListener(KVListener listener) {
+        afterListenerList.add(listener);
     }
 
     private class DefaultStateMachine implements StateMachine {
@@ -195,6 +218,8 @@ public class KVDatabaseImpl implements KVDatabase {
                 Connection connection = connectorMap.get(requestId);
                 //Follower不需要回复客户端
                 if(connection != null) {
+                    notifyListener(afterListenerList, connection.getCommand());
+
                     connection.reply(response);
                     connectorMap.remove(requestId);
                     futureMap.get(requestId).cancel(false);

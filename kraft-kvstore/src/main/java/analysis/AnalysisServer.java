@@ -12,20 +12,30 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import server.store.KVStore;
-import server.store.KVStoreIterator;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class KVDataCollector {
-    private KVStore kvStore;
-    private final int port;
+public class AnalysisServer {
+    private static final Logger logger = LoggerFactory.getLogger(AnalysisServer.class);
 
-    public KVDataCollector(KVStore kvStore, int port) {
-        this.kvStore = kvStore;
+    private final int port;
+    private final Map<Integer, Collector> collectorMap = new HashMap<>();
+
+    public AnalysisServer(int port) {
         this.port = port;
     }
+
+    public void registerCollector(int type, Collector collector) {
+        collectorMap.put(type, collector);
+    }
+    public void unregisterCollector(int type) {
+        collectorMap.remove(type);
+    }
+
     public void start() {
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(1);
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -52,20 +62,25 @@ public class KVDataCollector {
     private class CollectorHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if(msg instanceof GetAllDataCommand) {
-                Map<byte[], byte[]> map = new HashMap<>();
-                try (final KVStoreIterator iterator = kvStore.newIterator()) {
-                    iterator.seekToFirst();
-                    for (; iterator.isValid(); iterator.next()) {
-                        map.put(iterator.key(), iterator.value());
-                    }
+            if(msg instanceof Integer) {
+                Collector collector = collectorMap.get((Integer) msg);
+                if(collector != null) {
+                    ctx.channel().writeAndFlush(collector.collect());
+                } else {
+                    logger.warn("collector not found, msg: {}", msg);
                 }
-                ctx.channel().writeAndFlush(map);
+//                Map<byte[], byte[]> map = new HashMap<>();
+//                try (final KVStoreIterator iterator = kvStore.newIterator()) {
+//                    iterator.seekToFirst();
+//                    for (; iterator.isValid(); iterator.next()) {
+//                        map.put(iterator.key(), iterator.value());
+//                    }
+//                }
+//                ctx.channel().writeAndFlush(map);
             } else {
+                logger.warn("receive unknown message: {}", msg);
                 super.channelRead(ctx, msg);
             }
         }
     }
-
 }
-

@@ -1,6 +1,8 @@
 package server.store;
 
-public interface KVStoreIterator {
+import java.io.Closeable;
+
+public interface KVStoreIterator extends Closeable {
     void seekToFirst();
     void seekToLast();
     byte[] key();

@@ -9,4 +9,6 @@ public interface KVDatabase {
     void handleCommand(Connection connection);
     void registerCommandHandler(Class<?> clazz, CommandHandler handler);
     void unregisterCommandHandler(Class<?> clazz);
+    void addBeforeListener(KVListener listener);
+    void addAfterListener(KVListener listener);
 }

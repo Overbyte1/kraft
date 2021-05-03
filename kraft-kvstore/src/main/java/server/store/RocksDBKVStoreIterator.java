@@ -3,6 +3,8 @@ package server.store;
 import org.rocksdb.RocksIterator;
 import server.store.KVStoreIterator;
 
+import java.io.IOException;
+
 public class RocksDBKVStoreIterator implements KVStoreIterator {
     private RocksIterator iterator;
 
@@ -43,5 +45,10 @@ public class RocksDBKVStoreIterator implements KVStoreIterator {
     @Override
     public boolean isValid() {
         return iterator.isValid();
+    }
+
+    @Override
+    public void close() throws IOException {
+        iterator.close();
     }
 }
