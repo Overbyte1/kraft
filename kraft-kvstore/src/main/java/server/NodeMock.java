@@ -1,6 +1,7 @@
 package server;
 
 import election.node.Node;
+import election.role.RoleType;
 import election.statemachine.StateMachine;
 import rpc.NodeEndpoint;
 
@@ -28,6 +29,16 @@ public class NodeMock implements Node {
     @Override
     public boolean isLeader() {
         return leader;
+    }
+
+    @Override
+    public RoleType getRoleType() {
+        return null;
+    }
+
+    @Override
+    public long getCurrentTerm() {
+        return 0;
     }
 
     @Override

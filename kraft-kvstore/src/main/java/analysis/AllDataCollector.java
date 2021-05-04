@@ -1,11 +1,14 @@
 package analysis;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import server.store.KVStore;
 import server.store.KVStoreIterator;
 
 import java.io.IOException;
 
 public class AllDataCollector implements Collector {
+    private static final Logger logger = LoggerFactory.getLogger(AllDataCollector.class);
     private final KVStore kvStore;
 
     public AllDataCollector(KVStore kvStore) {
@@ -33,7 +36,7 @@ public class AllDataCollector implements Collector {
                         .append("\n");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn("fail to collect all kv data, exception type: {}, cause: {}", e.getClass().getName(), e.getMessage());
         }
         //            Map<byte[], byte[]> map = (Map<byte[], byte[]>) handler.getMsg();
 //            String gap = "\t\t\t\t\t\t\t";

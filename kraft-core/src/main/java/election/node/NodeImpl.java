@@ -285,6 +285,16 @@ public class NodeImpl implements Node {
     }
 
     @Override
+    public RoleType getRoleType() {
+        return currentRole.getRoleType();
+    }
+
+    @Override
+    public long getCurrentTerm() {
+        return currentRole.getCurrentTerm();
+    }
+
+    @Override
     public NodeEndpoint getLeaderNodeEndpoint() {
         Callable<NodeEndpoint> task = () -> {
             //Candidate的voteFor是他自身nodeId

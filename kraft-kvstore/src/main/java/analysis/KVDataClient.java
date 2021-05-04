@@ -19,7 +19,6 @@ public class KVDataClient {
 
     public static void main(String[] args) throws RocksDBException {
         int port = 9981;
-
 //        Options options = new Options();
 //
 //        options.setCreateIfMissing(true);
