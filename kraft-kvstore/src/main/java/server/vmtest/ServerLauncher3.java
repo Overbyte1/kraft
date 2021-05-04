@@ -1,5 +1,6 @@
 package server.vmtest;
 
+import analysis.AnalysisServerLauncher;
 import com.alibaba.fastjson.JSON;
 import common.codec.FrameDecoder;
 import common.codec.FrameEncoder;
@@ -75,6 +76,8 @@ public class ServerLauncher3 {
         ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server3.json"), ServerConfig.class);
 
         kvDatabase = new KVDatabaseImpl(node, config);
+        AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
+        analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
 //        kvDatabase.start();
 //        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
 //        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));

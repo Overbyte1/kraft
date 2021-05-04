@@ -11,7 +11,11 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.impl.completer.ArgumentCompleter;
 import org.jline.reader.impl.completer.NullCompleter;
 import org.jline.reader.impl.completer.StringsCompleter;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import org.jline.terminal.impl.jna.win.JnaWinSysTerminal;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +62,16 @@ public class TrxCommandHandler extends InlineCommandHandler {
                 new StringsCompleter(inlineCommandMap.keySet()),
                 new NullCompleter()
         );
+        Terminal terminal = null;
+        try {
+            terminal = TerminalBuilder.builder()
+                    .dumb(true)
+                    .build();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         LineReader reader = LineReaderBuilder.builder()
+                .terminal(terminal)
                 .completer(completer)
                 .build();
         String line;

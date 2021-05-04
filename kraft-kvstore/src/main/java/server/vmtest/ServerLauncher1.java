@@ -2,32 +2,16 @@ package server.vmtest;
 
 import analysis.AnalysisServerLauncher;
 import com.alibaba.fastjson.JSON;
-import common.codec.FrameDecoder;
-import common.codec.FrameEncoder;
-import common.codec.ProtocolDecoder;
-import common.codec.ProtocolEncoder;
 import common.message.command.*;
 import config.ClusterConfig;
 import election.node.Node;
 import election.node.NodeImpl;
 import election.statemachine.DefaultStateMachine;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDBException;
 import server.KVDatabase;
 import server.KVDatabaseImpl;
-import server.ServerLauncher;
-
 import server.config.ServerConfig;
-import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
@@ -39,23 +23,22 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CyclicBarrier;
 
-public class ServerLauncher2 {
+public class ServerLauncher1 {
     private KVDatabase kvDatabase;
 
     private Node buildNode() throws IOException {
         File file = new File(".");
         System.out.println(file.getAbsolutePath());
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft2.json"), ClusterConfig.class);
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft1.json"), ClusterConfig.class);
         System.out.println(config);
 
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
-        return builder.withId("B")
+        return builder.withId("A")
                 .withListenPort(config.getPort())
                 .withLogReplicationInterval(config.getLogReplicationInterval())
                 .withNodeList(config.getMembers())
-                .withPath(config.getPath() + "B/")
+                .withPath(config.getPath() + "A/")
                 .withStateMachine(new DefaultStateMachine())
                 .build();
     }
@@ -63,7 +46,7 @@ public class ServerLauncher2 {
     private KVStore getTrxKvStore() throws RocksDBException {
         Options options = new Options();
         options.setCreateIfMissing(true);
-        KVStore transactionKVStore = new RocksDBTransactionKVStore(options, "./db/B/");
+        KVStore transactionKVStore = new RocksDBTransactionKVStore(options, "./db/A/");
         return transactionKVStore;
     }
     private KVStore getMemKVStore() {
@@ -73,9 +56,10 @@ public class ServerLauncher2 {
     public void init() throws IOException, RocksDBException {
         Node node = buildNode();
         KVStore kvStore = getTrxKvStore();
-        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server2.json"), ServerConfig.class);
+        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server1.json"), ServerConfig.class);
 
         kvDatabase = new KVDatabaseImpl(node, config);
+
         AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
         analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
 //        kvDatabase.start();
@@ -109,7 +93,7 @@ public class ServerLauncher2 {
 
     }
     public static void main(String[] args) throws IOException, RocksDBException {
-        ServerLauncher2 launcher = new ServerLauncher2();
+        ServerLauncher1 launcher = new ServerLauncher1();
         launcher.init();
     }
 }

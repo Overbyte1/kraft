@@ -2,6 +2,7 @@ package server.config;
 
 public class ServerConfig {
     private int port;
+    private int analysisPort;
     private long executeTimeout;
 
     public ServerConfig(){}
@@ -9,6 +10,14 @@ public class ServerConfig {
     public ServerConfig(int port, long executeTimeout) {
         this.port = port;
         this.executeTimeout = executeTimeout;
+    }
+
+    public int getAnalysisPort() {
+        return analysisPort;
+    }
+
+    public void setAnalysisPort(int analysisPort) {
+        this.analysisPort = analysisPort;
     }
 
     public int getPort() {

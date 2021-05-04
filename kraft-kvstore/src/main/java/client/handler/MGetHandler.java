@@ -31,7 +31,7 @@ public class MGetHandler extends InlineCommandHandler {
         for(byte[] bytes : result.getPayload()) {
             sb.append(bytesToString(bytes)).append('\n');
         }
-        System.out.println(sb.toString());
+        System.out.print(sb.toString());
     }
 
 }

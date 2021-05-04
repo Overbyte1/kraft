@@ -153,7 +153,7 @@ public class KVDatabaseImpl implements KVDatabase {
 
     @Override
     public void handleCommand(Connection connection) {
-        notifyListener(beforeListenerList, connection.getCommand());
+        notifyListener(beforeListenerList, connection);
 
         if(!node.isLeader()) {
             redirectOrFail(connection);
@@ -170,12 +170,12 @@ public class KVDatabaseImpl implements KVDatabase {
         }
         Response<?> response = handlerMap.get(command.getClass()).handleCommand(command);
         if(response != null) {
-            notifyListener(afterListenerList, connection.getCommand());
+            notifyListener(afterListenerList, connection);
             connection.reply(response);
         }
     }
 
-    private void notifyListener(List<KVListener> listeners, Object arg) {
+    private void notifyListener(List<KVListener> listeners, Connection<?> arg) {
         for (KVListener listener : listeners) {
             listener.listen(arg);
         }
@@ -216,10 +216,9 @@ public class KVDatabaseImpl implements KVDatabase {
             Response<?> response = handlerMap.get(modifiedCommand.getClass()).doHandle(modifiedCommand);
             try {
                 Connection connection = connectorMap.get(requestId);
+                notifyListener(afterListenerList, connection);
                 //Follower不需要回复客户端
                 if(connection != null) {
-                    notifyListener(afterListenerList, connection.getCommand());
-
                     connection.reply(response);
                     connectorMap.remove(requestId);
                     futureMap.get(requestId).cancel(false);
