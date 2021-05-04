@@ -1,11 +1,17 @@
 package server;
 
+import analysis.AnalysisServerLauncher;
+import com.alibaba.fastjson.JSON;
 import common.codec.FrameDecoder;
 import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.command.*;
+import config.ClusterConfig;
 import config.DefaultConfigLoader;
+import election.node.Node;
+import election.node.NodeImpl;
+import election.statemachine.DefaultStateMachine;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -14,43 +20,64 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDBException;
+import server.config.ServerConfig;
 import server.config.ServerConfigLoader;
 import server.handler.*;
 import server.store.KVStore;
 import server.store.MemHTKVStore;
 import server.store.RocksDBTransactionKVStore;
 import server.store.TransactionKVStore;
+import server.vmtest.ServerLauncher1;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 
 public class ServerLauncher {
-    private NodeMock node;
     private KVDatabase kvDatabase;
-    private Channel channel;
-    private CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
-    private TestHandle testHandle = new TestHandle(cyclicBarrier);
 
+    private Node buildNode() throws IOException {
+        File file = new File(".");
+        System.out.println(file.getAbsolutePath());
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft.json"), ClusterConfig.class);
+        System.out.println(config);
 
+        NodeImpl.NodeBuilder builder = NodeImpl.builder();
+        return builder.withId(config.getSelfId())
+                .withListenPort(config.getPort())
+                .withLogReplicationInterval(config.getLogReplicationInterval())
+                .withNodeList(config.getMembers())
+                .withPath(config.getPath() + "/")
+                .withStateMachine(new DefaultStateMachine())
+                .build();
+    }
 
     private KVStore getTrxKvStore() throws RocksDBException {
         Options options = new Options();
         options.setCreateIfMissing(true);
-        KVStore transactionKVStore = new RocksDBTransactionKVStore(options);
+        KVStore transactionKVStore = new RocksDBTransactionKVStore(options, "./db/");
         return transactionKVStore;
     }
     private KVStore getMemKVStore() {
         return new MemHTKVStore();
     }
 
-    public void init() throws IOException {
-        node = new NodeMock();
-        kvDatabase = new KVDatabaseImpl(node, new ServerConfigLoader().load(null));
+    public void init() throws IOException, RocksDBException {
+        Node node = buildNode();
+        KVStore kvStore = getTrxKvStore();
+        ServerConfig config = JSON.parseObject(new FileInputStream("./conf/server.json"), ServerConfig.class);
+
+        kvDatabase = new KVDatabaseImpl(node, config);
+
+        AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
+        analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+
         Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
         kvDatabase.start();
-        KVStore kvStore = getMemKVStore();
+
         handlerMap.put(GetCommand.class, new GetCommandHandler(kvStore));
         handlerMap.put(SetCommand.class, new SetCommandHandler(kvStore, node));
         handlerMap.put(DelCommand.class, new DelCommandHandler(kvStore, node));
@@ -62,56 +89,14 @@ public class ServerLauncher {
         handlerMap.put(PingCommand.class, new PingCommandHandler());
         handlerMap.put(TrxCommand.class, new TrxCommandHandler(node, (TransactionKVStore)kvStore, handlerMap));
 
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
-        Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(workerGroup)
-                .channel(NioSocketChannel.class)
-                .remoteAddress("localhost", 8848)
-                .handler(new ChannelInitializer<NioSocketChannel>() {
-                    @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new FrameDecoder())
-                                .addLast(new FrameEncoder())
-                                .addLast(new ProtocolDecoder())
-                                .addLast(new ProtocolEncoder())
-                                .addLast(testHandle)
-                                .addLast(new LoggingHandler(LogLevel.INFO));
-                    }
-                });
-        try {
-            ChannelFuture future = bootstrap.connect().sync();
-            System.out.println("connect established");
-            channel = future.channel();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        for (Map.Entry<Class<?>, CommandHandler> entry : handlerMap.entrySet()) {
+            kvDatabase.registerCommandHandler(entry.getKey(), entry.getValue());
         }
+
     }
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, RocksDBException {
         ServerLauncher launcher = new ServerLauncher();
         launcher.init();
     }
 }
-class TestHandle extends ChannelInboundHandlerAdapter {
-    private Object receiveMessage;
-    private CyclicBarrier cyclicBarrier;
 
-    public TestHandle(CyclicBarrier cyclicBarrier) {
-        this.cyclicBarrier = cyclicBarrier;
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("client receive message: " + msg);
-        receiveMessage = msg;
-        cyclicBarrier.await();
-        super.channelRead(ctx, msg);
-    }
-
-    public Object getReceiveMessage() {
-        return receiveMessage;
-    }
-    public void resetMsg() {
-        receiveMessage = null;
-    }
-}

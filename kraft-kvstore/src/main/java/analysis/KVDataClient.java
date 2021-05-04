@@ -18,18 +18,14 @@ public class KVDataClient {
     private CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
 
     public static void main(String[] args) throws RocksDBException {
-        int port = 9982;
-//        Options options = new Options();
-//
-//        options.setCreateIfMissing(true);
-//        KVStore kvStore = new RocksDBTransactionKVStore(options, "./db/A/");
-//        KVDataCollector collector = new KVDataCollector(kvStore, port);
-//        collector.start();
+        int port = Integer.parseInt(args[0]);
+        int type = Integer.parseInt(args[1]);
+
         KVDataClient client = new KVDataClient();
-        client.handle("localhost", port);
+        client.handle("localhost", port, type);
 
     }
-    public void handle(String ip, int port) {
+    public void handle(String ip, int port, int type) {
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(1);
         Bootstrap bootstrap = new Bootstrap();
         ReadHandler handler = new ReadHandler();
@@ -48,21 +44,12 @@ public class KVDataClient {
                 });
         try {
             ChannelFuture future = bootstrap.connect(ip, port).sync();
-            while (true) {
-                future.channel().writeAndFlush(AnalysisType.COMMAND_THROUGHOUT);
+                future.channel().writeAndFlush(type);
                 cyclicBarrier.await();
                 System.out.println(handler.getMsg());
                 cyclicBarrier.reset();
-                Thread.sleep(1000);
-            }
-//            Map<byte[], byte[]> map = (Map<byte[], byte[]>) handler.getMsg();
-//            String gap = "\t\t\t\t\t\t\t";
-//            System.out.println("key" + gap + "value");
-//            System.out.println("-----------------------------------------------------");
-//            for (Map.Entry<byte[], byte[]> entry : map.entrySet()) {
-//                System.out.println(new String(entry.getKey()) + gap + new String(entry.getValue()));
-//            }
-            //workerGroup.shutdownGracefully();
+
+            workerGroup.shutdownGracefully();
         } catch (InterruptedException e) {
             workerGroup.shutdownGracefully();
             e.printStackTrace();
