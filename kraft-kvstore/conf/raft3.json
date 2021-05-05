@@ -13,9 +13,7 @@
   "members":[
     {"nodeId": {"value": "A"}, "endpoint": {"ipAddress": "localhost", "port": 8001}},
     {"nodeId": {"value": "B"}, "endpoint": {"ipAddress": "localhost", "port": 8002}},
-    {"nodeId": {"value": "C"}, "endpoint": {"ipAddress": "localhost", "port": 8003}},
-    {"nodeId": {"value": "D"}, "endpoint": {"ipAddress": "localhost", "port": 8004}},
-    {"nodeId": {"value": "E"}, "endpoint": {"ipAddress": "localhost", "port": 8005}}
+    {"nodeId": {"value": "C"}, "endpoint": {"ipAddress": "localhost", "port": 8003}}
   ],
 
   "selfId": {"value": "C"},

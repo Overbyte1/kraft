@@ -89,7 +89,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>dependency/</classpathPrefix>
-                            <mainClass>analysis.KVDataClient</mainClass>
+                            <mainClass>server.ServerLauncher</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

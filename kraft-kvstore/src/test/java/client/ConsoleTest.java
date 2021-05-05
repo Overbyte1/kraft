@@ -30,7 +30,7 @@ public class ConsoleTest {
                 new TrxCommandHandler()
         );
         Map<NodeId, Endpoint> endpointMap = new HashMap<>();
-        endpointMap.put(new NodeId("A"), new Endpoint("121.196.164.25", 8101));
+        endpointMap.put(new NodeId("A"), new Endpoint("101.32.214.146", 8101));
 //        endpointMap.put(new NodeId("B"), new Endpoint("localhost", 8102));
 //        endpointMap.put(new NodeId("C"), new Endpoint("localhost", 8103));
         ClientConfig config = new ClientConfigLoader().load(null);

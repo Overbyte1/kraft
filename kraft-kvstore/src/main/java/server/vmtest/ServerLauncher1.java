@@ -30,7 +30,7 @@ public class ServerLauncher1 {
     private Node buildNode() throws IOException {
         File file = new File(".");
         System.out.println(file.getAbsolutePath());
-        ClusterConfig config = JSON.parseObject(new FileInputStream("./conf/raft1.json"), ClusterConfig.class);
+        ClusterConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/raft1.json"), ClusterConfig.class);
         System.out.println(config);
 
         NodeImpl.NodeBuilder builder = NodeImpl.builder();
@@ -56,12 +56,15 @@ public class ServerLauncher1 {
     public void init() throws IOException, RocksDBException {
         Node node = buildNode();
         KVStore kvStore = getTrxKvStore();
-        ServerConfig config = JSON.parseObject(new FileInputStream("./conf/server1.json"), ServerConfig.class);
+        ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server1.json"), ServerConfig.class);
 
         kvDatabase = new KVDatabaseImpl(node, config);
 
         AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
-        analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        new Thread(()->{
+            analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        }).start();
+
 //        kvDatabase.start();
 //        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
 //        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));

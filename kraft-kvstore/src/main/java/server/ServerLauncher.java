@@ -73,7 +73,10 @@ public class ServerLauncher {
         kvDatabase = new KVDatabaseImpl(node, config);
 
         AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
-        analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        //analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        new Thread(()->{
+            analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        }, "analysis server thread").start();
 
         Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
         kvDatabase.start();

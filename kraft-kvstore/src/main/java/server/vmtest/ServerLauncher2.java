@@ -77,7 +77,10 @@ public class ServerLauncher2 {
 
         kvDatabase = new KVDatabaseImpl(node, config);
         AnalysisServerLauncher analysisServerLauncher = new AnalysisServerLauncher();
-        analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        //analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        new Thread(()->{
+            analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
+        }).start();
 //        kvDatabase.start();
 //        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
 //        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
