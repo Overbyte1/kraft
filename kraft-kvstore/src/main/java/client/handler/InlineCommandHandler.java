@@ -21,6 +21,7 @@ public abstract class InlineCommandHandler implements CommandHandler, ConsoleOut
             if(type == ResponseType.FAILURE) {
                 System.out.println("error: " + ((FailureResult)(resp.getBody())).getErrorMessage());
             } else {
+                handleResult(resp, commandContext);
                 output(resp);
             }
 
@@ -32,6 +33,7 @@ public abstract class InlineCommandHandler implements CommandHandler, ConsoleOut
     //TODO:语法合法性检查
     public abstract Object getSendMessage(String[] args, CommandContext commandContext);
 
+    public void handleResult(Response<?> response, CommandContext commandContext) {}
 
     @Override
     public void output(Response<?> msg) {

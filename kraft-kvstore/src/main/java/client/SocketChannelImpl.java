@@ -47,8 +47,10 @@ public class SocketChannelImpl implements SocketChannel {
     }
 
     public Object send(String ip, int port, Object msg) throws SendTimeoutException {
-        if(this.ip == null || this.port == 0 || channel == null) {
+        if(this.ip == null || this.port == 0 || channel == null || this.ip != ip || this.port != port) {
             connect(ip, port);
+            this.ip = ip;
+            this.port = port;
         }
         channel.writeAndFlush(msg);
         try {
@@ -80,8 +82,8 @@ public class SocketChannelImpl implements SocketChannel {
                                 .addLast(new FrameEncoder())
                                 .addLast(new ProtocolDecoder())
                                 .addLast(new ProtocolEncoder())
-                                .addLast(readHandler)
-                                .addLast(new LoggingHandler(LogLevel.INFO));
+                                .addLast(readHandler);
+                                //.addLast(new LoggingHandler(LogLevel.WARN));
                     }
                 });
         ChannelFuture future;
@@ -106,7 +108,7 @@ public class SocketChannelImpl implements SocketChannel {
             } finally {
                 lock.unlock();
             }
-            super.channelRead(ctx, msg);
+            //super.channelRead(ctx, msg);
         }
 
         public Object getAndResetMessage() {

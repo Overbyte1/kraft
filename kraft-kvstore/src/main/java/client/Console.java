@@ -65,7 +65,7 @@ public class Console {
         return inlineCommandMap;
     }
 
-    void start() {
+    public void start() {
         showInfo();
         commandContext.setRunning(true);
         String line = null;

@@ -5,6 +5,7 @@ import common.codec.FrameEncoder;
 import common.codec.ProtocolDecoder;
 import common.codec.ProtocolEncoder;
 import common.message.Connection;
+import common.message.command.DisconnectCommand;
 import common.message.command.ModifiedCommand;
 import common.message.response.*;
 import config.ClusterConfig;
@@ -114,8 +115,8 @@ public class KVDatabaseImpl implements KVDatabase {
                                 .addLast(new FrameEncoder())
                                 .addLast(new ProtocolDecoder())
                                 .addLast(new ProtocolEncoder())
-                                .addLast(new ServiceHandler(kvStore))
-                                .addLast(new LoggingHandler(LogLevel.INFO));
+                                .addLast(new ServiceHandler(kvStore));
+                                //.addLast(new LoggingHandler(LogLevel.WARN));
                     }
                 });
         try {
@@ -163,10 +164,12 @@ public class KVDatabaseImpl implements KVDatabase {
         if(command instanceof ModifiedCommand) {
             String requestId = ((ModifiedCommand) command).getRequestId();
             connectorMap.put(requestId, connection);
-            ScheduledFuture<?> future = scheduledExecutor.schedule(new TimeoutResponseTask(requestId),
-                    config.getExecuteTimeout(), TimeUnit.MILLISECONDS);
-
-            futureMap.put(requestId, future);
+//            ScheduledFuture<?> future = scheduledExecutor.schedule(new TimeoutResponseTask(requestId),
+//                    config.getExecuteTimeout(), TimeUnit.MILLISECONDS);
+//
+//            futureMap.put(requestId, future);
+        } else if(command instanceof DisconnectCommand) {
+            //connectorMap.remove()
         }
         Response<?> response = handlerMap.get(command.getClass()).handleCommand(command);
         if(response != null) {
@@ -220,9 +223,10 @@ public class KVDatabaseImpl implements KVDatabase {
                 //Follower不需要回复客户端
                 if(connection != null) {
                     connection.reply(response);
-                    connectorMap.remove(requestId);
-                    futureMap.get(requestId).cancel(false);
-                    futureMap.remove(requestId);
+                    //TODO:长连接
+                    //connectorMap.remove(requestId);
+                    //futureMap.get(requestId).cancel(false);
+                    //futureMap.remove(requestId);
                 }
                 //connectorMap.get(requestId).reply(response);
             } catch (Exception exception) {

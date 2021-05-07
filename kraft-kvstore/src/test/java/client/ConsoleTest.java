@@ -1,5 +1,6 @@
 package client;
 
+import client.balance.LeaderOnlyLoadBalance;
 import client.balance.PollingLoadBalance;
 import client.config.ClientConfig;
 import client.config.ClientConfigLoader;
@@ -30,11 +31,12 @@ public class ConsoleTest {
                 new TrxCommandHandler()
         );
         Map<NodeId, Endpoint> endpointMap = new HashMap<>();
-        endpointMap.put(new NodeId("A"), new Endpoint("101.32.214.146", 8101));
+        endpointMap.put(new NodeId("A"), new Endpoint("localhost", 8101));
 //        endpointMap.put(new NodeId("B"), new Endpoint("localhost", 8102));
 //        endpointMap.put(new NodeId("C"), new Endpoint("localhost", 8103));
         ClientConfig config = new ClientConfigLoader().load(null);
-        Console console = new Console(endpointMap, handlers, new PollingLoadBalance(config, new Router(endpointMap)), config);
+        //Console console = new Console(endpointMap, handlers, new PollingLoadBalance(config, new Router(endpointMap)), config);
+        Console console = new Console(endpointMap, handlers, new LeaderOnlyLoadBalance(new Router(endpointMap)), config);
         console.start();
     }
     @Test

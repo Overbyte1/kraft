@@ -20,6 +20,7 @@ public class MSetHandler extends InlineCommandHandler {
     }
 
 
+    @Override
     public Object getSendMessage(String[] args, CommandContext commandContext) {
         if(args.length % 2 == 1 || args.length == 0) {
             throw new ParameterException("illegal arguments");

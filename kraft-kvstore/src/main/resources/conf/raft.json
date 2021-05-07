@@ -1,0 +1,22 @@
+{
+  "minElectionTimeout": 6000,
+  "maxElectionTimeout": 9000,
+  "logReplicationInterval": 2000,
+  "logReplicationResultTimeout": 4000,
+  "connectTimeout": 4000,
+
+  "maxDataFileSize": 1024,
+  "bufferSize": 8096,
+  "maxTransportEntries": -1,
+  "path": "./data/node/",
+
+  "members":[
+    {"nodeId": {"value": "A"}, "endpoint": {"ipAddress": "121.196.164.25", "port": 8001}},
+    {"nodeId": {"value": "B"}, "endpoint": {"ipAddress": "101.32.214.146", "port": 8001}},
+    {"nodeId": {"value": "C"}, "endpoint": {"ipAddress": "42.193.161.109", "port": 8001}}
+  ],
+
+  "selfId": {"value": "A"},
+  "port": 8001,
+  "selfIp": "localhost"
+}

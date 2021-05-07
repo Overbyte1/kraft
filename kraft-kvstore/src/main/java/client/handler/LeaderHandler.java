@@ -29,6 +29,11 @@ public class LeaderHandler extends InlineCommandHandler {
         }
     }
 
+    @Override
+    public void handleResult(Response<?> response, CommandContext commandContext) {
+        NodeEndpoint nodeEndpoint =  (NodeEndpoint)(response.getBody());
+        commandContext.getRouter().setLeaderId(nodeEndpoint.getNodeId());
+    }
 
     @Override
     public String getCommandName() {

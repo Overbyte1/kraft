@@ -60,7 +60,9 @@ public class RocksDBTransactionKVStore implements TransactionKVStore {
         try {
             byte[] bytes =  transactionDb.get(key.getBytes());
             return bytes;
-        } catch (RocksDBException e) {
+        } catch (Exception e) {
+            System.out.println("exception: " + key + " db: " + transactionDb);
+            e.printStackTrace();
             logger.warn("fail to get key: [{}], cause: {}", key, e.getMessage());
         }
         return null;

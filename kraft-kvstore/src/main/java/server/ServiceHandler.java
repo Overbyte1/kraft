@@ -30,6 +30,6 @@ public class ServiceHandler extends ChannelInboundHandlerAdapter {
             channel.writeAndFlush(new Response<FailureResult>(ResponseType.FAILURE, FailureResult.SERVER_INTERVAL_ERROR));
         }
 
-        super.channelRead(ctx, msg);
+        //super.channelRead(ctx, msg);
     }
 }

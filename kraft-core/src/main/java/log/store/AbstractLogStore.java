@@ -84,6 +84,11 @@ public abstract class AbstractLogStore implements LogStore{
                         "preTerm is {}, preLogIndex is {}, but current logIndex is {}", preTerm, preLogIndex, entry.getIndex());
                 //回滚
                 deleteLogEntriesFrom(lastLogIndexTemp + 1);
+                System.out.println(lastLogIndex);
+                for (Entry log : logs) {
+                    System.out.print(log.getIndex() + " ");
+                }
+                System.out.println();
                 return false;
             }
             preTerm = entry.getTerm();
