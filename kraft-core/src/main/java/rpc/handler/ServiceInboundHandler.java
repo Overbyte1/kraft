@@ -51,7 +51,7 @@ public class ServiceInboundHandler extends ChannelInboundHandlerAdapter {
         //处理
         handler.handle(msg);
 
-        //super.channelRead(ctx, msg);
+        super.channelRead(ctx, msg);
     }
 
     @Override

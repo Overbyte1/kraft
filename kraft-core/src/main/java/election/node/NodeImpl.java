@@ -422,6 +422,8 @@ public class NodeImpl implements Node {
                         message = log.createAppendEntriesMessage(currentNodeId, term, nextIndex);
                         generalMessage = message;
                     }
+                    //增加nextIndex,TODO:解决Follower附加日志失败的处理
+                    member.getReplicationState().incNextIndex(message.getEntryList().size());
 
                 } else { //若节点不在线则发送心跳包探测其存活状态
                     //判断是否能复用emptyMessage

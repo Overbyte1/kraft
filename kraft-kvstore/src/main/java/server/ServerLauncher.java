@@ -88,14 +88,15 @@ public class ServerLauncher {
         handlerMap.put(MSetCommand.class, new MSetCommandHandler(kvStore, node));
         handlerMap.put(MGetCommand.class, new MGetCommandHandler(kvStore));
         handlerMap.put(LeaderCommand.class, new LeaderCommandHandler(node));
-        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node));
+        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node, 100));
         handlerMap.put(PingCommand.class, new PingCommandHandler());
         handlerMap.put(TrxCommand.class, new TrxCommandHandler(node, (TransactionKVStore)kvStore, handlerMap));
 
         for (Map.Entry<Class<?>, CommandHandler> entry : handlerMap.entrySet()) {
             kvDatabase.registerCommandHandler(entry.getKey(), entry.getValue());
         }
-
+        //TODO:1.修正端口信息
+        //TODO:2. 添加数据过期功能
     }
     public static void main(String[] args) throws IOException, RocksDBException {
         ServerLauncher launcher = new ServerLauncher();

@@ -110,8 +110,8 @@ public class LogImpl implements Log {
 
     @Override
     public boolean updateReplicationState(ReplicationState replicationState, long addNum) {
-        //TODO:需要确定replicationState matchIndex与nextIndex增加的幅度
-        replicationState.incNextIndex(addNum);
+        //TODO:解决Follower附加日志失败后的处理过程
+        //replicationState.incNextIndex(addNum);
         replicationState.setMatchIndex(replicationState.getNextIndex() - 1);
 
         return false;
