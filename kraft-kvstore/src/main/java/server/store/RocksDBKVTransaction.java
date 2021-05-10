@@ -64,7 +64,7 @@ public class RocksDBKVTransaction implements  KVTransaction{
 
     @Override
     public KVStoreIterator newIterator() {
-        //TODO:隔离级别
+        //隔离级别
         return new RocksDBKVStoreIterator(transaction.getIterator(new ReadOptions()));
     }
 

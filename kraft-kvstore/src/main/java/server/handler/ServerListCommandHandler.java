@@ -33,6 +33,6 @@ public class ServerListCommandHandler implements CommandHandler {
             resp[i] = new NodeEndpoint(allNodeEndpoint[i].getNodeId(),
                     new Endpoint(endpoint.getIpAddress(), endpoint.getPort() + portInterval));
         }
-        return new Response(ResponseType.SUCCEED,  node.getAllNodeEndpoint());
+        return new Response(ResponseType.SUCCEED, resp);
     }
 }

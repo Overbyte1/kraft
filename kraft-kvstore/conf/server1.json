@@ -1,5 +1,6 @@
 {
   "port": 8101,
+  "intervalPort": 100,
   "executeTimeout": 3000,
   "analysisPort": 9981
 }

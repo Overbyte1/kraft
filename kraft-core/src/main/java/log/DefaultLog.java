@@ -36,7 +36,6 @@ public class DefaultLog {
 
     public synchronized boolean advanceCommit(long currentTerm) {
         EntryMeta entryMata = logStore.getEntryMata(commitIndex);
-        //TODO:+1幅度过小，而且每次都要遍历所有的节点。优化思路：维护最小的过半 matchIndex 的值
         if(currentTerm == entryMata.getTerm() && nodeGroup.isMajorMatchIndex(commitIndex + 1)) {
             commitIndex++;
             apply();

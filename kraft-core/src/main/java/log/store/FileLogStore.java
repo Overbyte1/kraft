@@ -13,7 +13,6 @@ import java.util.*;
  * 1. 文件的存储格式、位置、命名
  * 2. 写回文件，读取文件的时机
  *
- * TODO：将所有的Generation进行抽象，让FileLogStore好像只在操作一个Generation
  */
 public class FileLogStore extends AbstractLogStore implements LogStore {
     private static final Logger logger = LoggerFactory.getLogger(FileLogStore.class);

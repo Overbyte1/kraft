@@ -20,13 +20,9 @@ public class Benchmark {
         String key = "test_key", value = "test_value";
         String ip = "localhost";
         int port = 8101;
-        //TODO:fix bugLeader发送给Follower的日志复制消息还已经被附加，但还未收到响应，此时客户端又来了请求，Leader发送给Follower旧日志导致日志附加失败
 
         int testNum =100000;
-//        System.out.println(getRandomKey(8));
-//        System.out.println(getRandomKey(8));
-//        System.out.println(idx);
-        //System.out.println(Arrays.toString(getRandomValue(8)));
+
         SocketChannelImpl socketChannel = new SocketChannelImpl();
         testSet(key, value, testNum, ip, port, socketChannel);
         testRead(key, testNum, ip, port, socketChannel);

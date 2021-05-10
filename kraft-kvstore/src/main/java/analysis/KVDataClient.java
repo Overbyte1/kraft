@@ -77,14 +77,16 @@ public class KVDataClient {
             InputStream is = socket.getInputStream();
             OutputStream os = socket.getOutputStream();
             os.write(type);
-
+            os.flush();
             //读取服务器返回的消息
             int len = is.read();
             byte[] bytes = new byte[len];
             is.read(bytes);
             System.out.println(new String(bytes));
+            socket.close();
+            //zabbix_get -s '127.0.0.1' -p 10050 -k "kvstore.current_term"
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(1);
         }
     }
     private class ReadHandler extends ChannelInboundHandlerAdapter {

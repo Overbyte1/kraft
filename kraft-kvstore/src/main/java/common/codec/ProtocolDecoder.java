@@ -11,7 +11,6 @@ public class ProtocolDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        //TODO:protobuf反序列化
         /*Json序列化
         int byteNum = in.readableBytes();
         byte[] bytes = new byte[byteNum];

@@ -5,7 +5,6 @@ import election.node.NodeId;
 public class CandidateRole extends AbstractRole {
     //当前已经获取的票数
     private int voteCount = 1;
-    //TODO：总票数如何统计？需要考虑节点的动态变更
 
     public CandidateRole(NodeId nodeId, long currentTerm) {
         this(nodeId, currentTerm, nodeId);

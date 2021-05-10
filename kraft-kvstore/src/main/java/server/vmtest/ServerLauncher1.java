@@ -57,6 +57,7 @@ public class ServerLauncher1 {
         Node node = buildNode();
         KVStore kvStore = getTrxKvStore();
         ServerConfig config = JSON.parseObject(new FileInputStream("./kraft-kvstore/conf/server1.json"), ServerConfig.class);
+        System.out.println(config);
 
         kvDatabase = new KVDatabaseImpl(node, config);
 
@@ -65,16 +66,6 @@ public class ServerLauncher1 {
             analysisServerLauncher.start(kvDatabase, kvStore, node, config.getAnalysisPort());
         }).start();
 
-//        kvDatabase.start();
-//        kvDatabase.registerCommandHandler(GetCommand.class, new GetCommandHandler(kvStore));
-//        kvDatabase.registerCommandHandler(SetCommand.class, new SetCommandHandler(kvStore, node));
-//        kvDatabase.registerCommandHandler(DelCommand.class, new DelCommandHandler(kvStore, node));
-//        kvDatabase.registerCommandHandler(MDelCommand.class, new MDelCommandHandler(kvStore, node));
-//        kvDatabase.registerCommandHandler(MSetCommand.class, new MSetCommandHandler(kvStore, node));
-//        kvDatabase.registerCommandHandler(MGetCommand.class, new MGetCommandHandler(kvStore));
-//        kvDatabase.registerCommandHandler(LeaderCommand.class, new LeaderCommandHandler(node));
-//        kvDatabase.registerCommandHandler(ServerListCommand.class, new ServerListCommandHandler(node));
-//        kvDatabase.registerCommandHandler(PingCommand.class, new PingCommandHandler());
 
         Map<Class<?>, CommandHandler> handlerMap = new HashMap<>();
         kvDatabase.start();
@@ -85,8 +76,8 @@ public class ServerLauncher1 {
         handlerMap.put(MDelCommand.class, new MDelCommandHandler(kvStore, node));
         handlerMap.put(MSetCommand.class, new MSetCommandHandler(kvStore, node));
         handlerMap.put(MGetCommand.class, new MGetCommandHandler(kvStore));
-        handlerMap.put(LeaderCommand.class, new LeaderCommandHandler(node));
-        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node));
+        handlerMap.put(LeaderCommand.class, new LeaderCommandHandler(node, config.getIntervalPort()));
+        handlerMap.put(ServerListCommand.class, new ServerListCommandHandler(node, config.getIntervalPort()));
         handlerMap.put(PingCommand.class, new PingCommandHandler());
         handlerMap.put(TrxCommand.class, new TrxCommandHandler(node, (TransactionKVStore)kvStore, handlerMap));
 

@@ -79,7 +79,7 @@ public class ChannelGroup {
         channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
-                //TODO:需要等待发送selfId后才能发送消息
+                //需要等待发送selfId后才能发送消息
                 future.await(connectTimeout, TimeUnit.MILLISECONDS);
                 if(future.isSuccess()) {
                     logger.debug("succeed to connect node {}, address: {}", nodeId, endpoint);
@@ -130,7 +130,7 @@ public class ChannelGroup {
 
     /**
      * 使用Map避免重复连接
-     * TODO：重复连接存在问题：
+     * 重复连接存在问题：
      * 1. selfId发送失败
      * 2. 两个节点同时发起连接
      * @param ipAddress
@@ -222,7 +222,6 @@ public class ChannelGroup {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if(evt == IdleStateEvent.ALL_IDLE_STATE_EVENT) {
-                //TODO:fix, node is null
                 logger.info("no network data with node [{}]  within [{} ms], close the connection",
                         getNodeId(new NioChannel(ctx.channel())), idleTime);
                 removeChannel(new NioChannel(ctx.channel()));

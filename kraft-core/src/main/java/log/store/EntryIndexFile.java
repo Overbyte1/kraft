@@ -85,7 +85,6 @@ public class EntryIndexFile {
         return ITEM_LENGTH_BYTE + EntryIndexItem.BYTE_LEN;
     }
 
-    //TODO:提到抽象类
     private void init(File file, long indexOffset, long termOffset) throws IOException {
         //File file = new File(fileName);
         if(!file.exists()) {

@@ -145,7 +145,7 @@ public class NodeImpl implements Node {
             }
             nodeGroup = new NodeGroup();
             for (NodeEndpoint nodeEndpoint : nodeList) {
-                //TODO:深拷贝
+                //深拷贝
                 nodeGroup.addGroupMember(nodeEndpoint.getNodeId(), new GroupMember(nodeEndpoint));
             }
             nodeGroup.setSelfNodeId(nodeId);
@@ -216,7 +216,6 @@ public class NodeImpl implements Node {
             log = new LogImpl(logStore, stateMachine, nodeGroup);
             ChannelGroup channelGroup = new ChannelGroup(nodeGroup);
             rpcHandler = new RpcHandlerImpl(channelGroup, port, connectTimeout, nodeId);
-            //TODO：打印所有配置信息
             return new NodeImpl(nodeGroup, rpcHandler, taskScheduler, log, nodeId, logReplicationInterval);
         }
         public Node justBuild(ClusterConfig config, StateMachine stateMachine) throws IOException {
@@ -422,7 +421,7 @@ public class NodeImpl implements Node {
                         message = log.createAppendEntriesMessage(currentNodeId, term, nextIndex);
                         generalMessage = message;
                     }
-                    //增加nextIndex,TODO:解决Follower附加日志失败的处理
+                    //增加nextIndex,解决Follower附加日志失败的处理
                     member.getReplicationState().incNextIndex(message.getEntryList().size());
 
                 } else { //若节点不在线则发送心跳包探测其存活状态
@@ -445,7 +444,6 @@ public class NodeImpl implements Node {
     private void registerHandler(AbstractRole targetRole) {
         Class clazz = targetRole.getClass();
         MessageHandler handler = getMessageHandler(clazz);
-        //TODO:根据不同role 移除或注册handler，需要确保更换的原子性 或者 处理时能够识别 角色已经改变
         serviceInboundHandler.registerHandler(AppendEntriesMessage.class, handler);
         serviceInboundHandler.registerHandler(AppendEntriesResultMessage.class, handler);
         serviceInboundHandler.registerHandler(RequestVoteMessage.class, handler);
@@ -655,7 +653,6 @@ public class NodeImpl implements Node {
             if(candidateRole.getVoteCount() > nodeGroup.getSize() / 2) {
                 logger.info("current node {} become leader,current term is {}", currentNodeId, currentTerm);
 
-                //TODO:初始化Leader需要维护的状态 replicationState，更新commitIndex
                 //long nextIndex = log.getLastLogIndex();
                 //nodeGroup.resetReplicationState(nextIndex);
 
@@ -695,7 +692,6 @@ public class NodeImpl implements Node {
                 return new AppendEntriesResultMessage(currentTerm, false);
             }
             if(currentTerm < term) {
-                //TODO：设置voteFor？
                 becomeToRole(new FollowerRole(currentRole.getNodeId(), term, appendRequestMsg.getLeaderId()));
             }
 
@@ -850,7 +846,7 @@ public class NodeImpl implements Node {
             //preLogTerm and preLogIndex 不匹配，减少 nextIndex 并重试
             GroupMember member = nodeGroup.getGroupMember(fromId);
             try {
-                //TODO：考虑二分查找进行优化，但需要修改AppendEntriesResultMessage消息格式
+                //考虑二分查找进行优化，但需要修改AppendEntriesResultMessage消息格式
                 member.getReplicationState().decNextIndex(1);
                 logger.debug("decrease nextIndex of node {}, current nextIndex is {}",
                         member.getNodeEndpoint(), member.getReplicationState().getNextIndex());

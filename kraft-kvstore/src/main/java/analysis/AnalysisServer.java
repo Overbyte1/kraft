@@ -70,6 +70,7 @@ public class AnalysisServer {
                 os.write(bytes.length);
                 os.write(bytes);
                 os.flush();
+                socket.close();
             }
         } catch (IOException e) {
             e.printStackTrace();

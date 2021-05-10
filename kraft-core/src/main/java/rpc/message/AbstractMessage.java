@@ -4,7 +4,7 @@ import election.node.NodeId;
 
 import java.io.Serializable;
 
-//TODO:remove it
+
 public class AbstractMessage<T> implements Serializable {
     private int type;
     private NodeId nodeId;

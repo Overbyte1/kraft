@@ -52,7 +52,6 @@ public class KVDatabaseImpl implements KVDatabase {
     private final List<KVListener> afterListenerList = new ArrayList<>();
 
     private final int NCPU = Runtime.getRuntime().availableProcessors() * 2;
-    //TODO:
     private final int portInterval = 100;
 
     private final ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(NCPU,
@@ -137,7 +136,6 @@ public class KVDatabaseImpl implements KVDatabase {
     }
 
     private void redirectOrFail(Connection connection) {
-        //TODO:添加选项，决定是否能够在Follower节点读数据
         NodeEndpoint leaderNodeEndpoint = node.getLeaderNodeEndpoint();
         if(leaderNodeEndpoint != null) {
             Endpoint endpoint = leaderNodeEndpoint.getEndpoint();
@@ -223,7 +221,6 @@ public class KVDatabaseImpl implements KVDatabase {
                 //Follower不需要回复客户端
                 if(connection != null) {
                     connection.reply(response);
-                    //TODO:长连接
                     //connectorMap.remove(requestId);
                     //futureMap.get(requestId).cancel(false);
                     //futureMap.remove(requestId);
@@ -234,12 +231,6 @@ public class KVDatabaseImpl implements KVDatabase {
             }
             return true;
         }
-
-    }
-    //TODO:builder
-    class KVDataBaseImplBuilder {
-        private KVStore kvStore;
-        private Node node;
 
     }
 

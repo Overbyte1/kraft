@@ -11,7 +11,6 @@ public abstract class AbstractRole {
     //节点ID
     private NodeId nodeId;
     //节点名称
-    //TODO:移除该属性
     private RoleType roleType;
 
     /*持久化数据*/
